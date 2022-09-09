@@ -50,8 +50,9 @@
      <Compile Include="Assets\Scripts\LidDrivenCavity.cs" />
      <Compile Include="Assets\Scripts\LBMNatConv.cs" />
      <Compile Include="Assets\Scripts\LBMTherm.cs" />
-     <Compile Include="Assets\Scripts\D2Q4AdvectionMain.cs" />
      <Compile Include="Assets\Scripts\IBLBMDKT.cs" />
+     <Compile Include="Assets\Scripts\D2Q4AdvectionMain.cs" />
+     <Compile Include="Assets\Scripts\LBMPoiWithParticle.cs" />
      <None Include="Assets\Scripts\data.txt" />
     <Reference Include="UnityEngine">
         <HintPath>C:\2020.3.31f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>

@@ -20,8 +20,6 @@ public class IBLBMSingle : MonoBehaviour
 
     public float maxRho,minRho;
     public float maxSpeed,minSpeed;
-    public float maxPhi,minPhi;
-    public float maxChe,minChe;
 
     float[] cx = new float[9]{0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
     float[] cy = new float[9]{0, 0,    1,    0,   -1,     1,     1,    -1,    -1};

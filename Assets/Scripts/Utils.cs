@@ -135,6 +135,38 @@ public class RoundParticle
         }
     }
 
+    public void UpdatePosVelPeriodicX(int DIM_X)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            vel[i] = (1f + 1f/density) * prevVel1[i]
+                                    - 1f/density * prevVel2[i]
+                                    + (forceFromFluid[i] + forceFromCollisions[i])/mass;
+                                    // + (1f - 1f/density) * gravity[i];
+            pos[i] += (vel[i] + prevVel1[i])/2f;
+            if(i==0)
+            {
+                if(pos[i]>=DIM_X) pos[i]-=DIM_X;
+                else if(pos[i]<0) pos[i]+=DIM_X;
+            }
+            prevVel2[i] = prevVel1[i];
+            prevVel1[i] = vel[i];
+        }
+    }
+
+    public void UpdatePerimeterPeriodicX(int DIM_X)
+    {
+        for(int i = 0; i < perimeterPointCount; i++) 
+        {
+            perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
+            if(perimeterPos[i,0]>=DIM_X) perimeterPos[i,0]-=DIM_X;
+            else if(perimeterPos[i,0]<0) perimeterPos[i,0]+=DIM_X;
+            perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
+            perimeterVel[i,0] = vel[0] - omega*(perimeterPos[i,1] - pos[1]);
+            perimeterVel[i,1] = vel[1] + omega*(perimeterPos[i,0] - pos[0]);
+        } 
+    }
+
     public void UpdatePerimeter()
     {
         for(int i = 0; i < perimeterPointCount; i++) 
