@@ -28,7 +28,7 @@ public class IBLBMSingle : MonoBehaviour
     float[] w = new float[9]{4f/9f,1f/9f,1f/9f,1f/9f,1f/9f,1f/36f,1f/36f,1f/36f,1f/36f};
     float[,] rho, u, v, speed, fx ,fy;
     float[,,] f, f0, ftmp;
-    float tmp,u2,nu,tmp1, tmp2, tmp3, gx, gy,dt,mp,iip;
+    float tmp,u2,nu,tmp1, tmp2, tmp3,dt,mp,iip;
     float[] xp, yp, xp1, yp1, fxp, fyp;
     float[] up, vp, up1, vp1, up2, vp2;
     float[] theta, torq, omega, omega1, omega2;
@@ -42,7 +42,7 @@ public class IBLBMSingle : MonoBehaviour
 
     public int loopCount = 1;
     public float gRate = 6f;
-
+    float[] gravity = new float[2];
     RoundParticle roundParticle;
 
     // Start is called before the first frame update
@@ -98,8 +98,8 @@ public class IBLBMSingle : MonoBehaviour
         mp = Mathf.PI*rp*rp;
         iip = Mathf.PI*rp*rp*rp*rp*0.5f;
         dt = nu/((float)(DIM_X-1)/2.0f)/((float)(DIM_X-1)/2.0f)/0.1f;
-        gy = -gRate*981.0f*(float)(DIM_X-1)*dt*dt;
-        gx = 0.0f;
+        gravity[1] = -gRate*981.0f*(float)(DIM_X-1)*dt*dt;
+        gravity[0] = 0.0f;
         for(int n = 0; n < particleCount; n++) {
             up[n] = 0f;    up1[n] = 0.0f;    up2[n] = 0.0f;
             vp[n] = 0.0f;    vp1[n] = 0.0f;    vp2[n] = 0.0f;
@@ -118,7 +118,7 @@ public class IBLBMSingle : MonoBehaviour
                 fxe[n,m] = 0.0f; fye[n,m] = 0.0f; ue[n,m] = 0.0f; ve[n,m] = 0.0f;
             } 
         } 
-        // roundParticle = new RoundParticle(rhop,rp,new float[2]{50f,300f});
+        roundParticle = new RoundParticle(rhop,rp,new float[2]{50f,300f});
         maxSpeed = 0f;
         minSpeed = Mathf.Infinity;
         maxRho = 0f;
@@ -127,7 +127,7 @@ public class IBLBMSingle : MonoBehaviour
         { 
             for(int j = 0; j < DIM_Y; j++)
             {
-                u[i,j] = 0.001f; v[i,j] = 0.0f;
+                u[i,j] = 0f; v[i,j] = 0.0f;
                 fx[i,j] = 0.0f; fy[i,j] = 0.0f;
                 rho[i,j] = 1.0f;
                 u2 = u[i,j]*u[i,j] + v[i,j]*v[i,j];  
@@ -186,20 +186,7 @@ public class IBLBMSingle : MonoBehaviour
                 plotPixels[i] = colorHeatMap.GetColorForValue(rho[i%DIM_X,i/DIM_X],maxRho);
             }
         }
-        // roundParticle.PlotParticlePerimeter(ref plotPixels,DIM_X);
-        for(int n = 0; n < particleCount; n++) 
-        {
-            // plotPixels[(int)xp[n] + (int)yp[n] * DIM_X] = new Color(1,1,1,1);
-            for(int m = 0; m < ne ; m++) 
-            {
-                if(
-                    (int)xe[n,m] + (int)ye[n,m] * DIM_X < plotPixels.Length
-                    &&  
-                    (int)xe[n,m] + (int)ye[n,m] * DIM_X >= 0
-                )
-                plotPixels[(int)xe[n,m] + (int)ye[n,m] * DIM_X] = new Color(1,1,1,1);
-            }
-        }
+        roundParticle.PlotParticlePerimeter(ref plotPixels,DIM_X);
         plotTexture.SetPixels(plotPixels);
         plotTexture.Apply();
         vectorField.UpdateVectors(u,v,DIM_Y,maxSpeed,vectorFieldOn);
@@ -302,34 +289,41 @@ public class IBLBMSingle : MonoBehaviour
 
     void ImmersedBoundary()
     {
-        for(int n = 0; n < particleCount; n++) 
+        for(int n = 0; n < 1; n++) 
         { 
-            fxc[n] = 0.0f;
-            fyc[n] = 0.0f;
-            tmp1 = Mathf.Abs(yp[n] + rp); 
-            if(tmp1 < 2.0f*rp + zeta){
-                fyc[n] += (yp[n] + rp)*(2.0f*rp - tmp1 + zeta)*(2.0f*rp - tmp1 + zeta)/epsw;
-            }
-            tmp1 = Mathf.Abs(xp[n] + rp);
-            if(tmp1 < 2.0f*rp + zeta){
-                fxc[n] += (xp[n] + rp)*(2.0f*rp - tmp1 + zeta)*(2.0f*rp - tmp1 + zeta)/epsw;
-            }
-            tmp1 = Mathf.Abs((DIM_X-1-xp[n]) + rp);
-            if(tmp1 < 2.0f*rp + zeta){
-                fxc[n] -= ((DIM_X-1-xp[n]) + rp)*(2.0f*rp - tmp1 + zeta)*(2.0f*rp - tmp1 + zeta)/epsw;
-            }
+            // tmp1 = Mathf.Abs(roundParticle.pos[1] + roundParticle.radius); 
+            // roundParticle.forceFromCollisions[0] = 0f;
+            // if(tmp1 < 2.0f*roundParticle.radius + zeta){
+            //     roundParticle.forceFromCollisions[1] = ((roundParticle.pos[1] + roundParticle.radius)/tmp1)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
+            // }
+            // else roundParticle.forceFromCollisions[1] = 0f;
 
-            fxp[n] = 0.0f; fyp[n] = 0.0f; torq[n] = 0.0f;
-            for(int m = 0; m < ne ; m++) 
+            // fxc[n] = 0.0f;
+            // fyc[n] = 0.0f;
+            // if(tmp1 < 2.0f*rp + zeta){
+            //     fyc[n] += (yp[n] + rp)*(2.0f*rp - tmp1 + zeta)*(2.0f*rp - tmp1 + zeta)/epsw;
+            // }
+
+            // fxp[n] = 0.0f; fyp[n] = 0.0f; torq[n] = 0.0f;
+            roundParticle.forceFromFluid[0] = 0f;
+            roundParticle.forceFromFluid[1] = 0f;
+            roundParticle.torque = 0f;
+            for(int m = 0; m < roundParticle.perimeterPointCount ; m++) 
             {
-                uet[n,m] = 0.0f; vet[n,m] = 0.0f;
+                // uet[n,m] = 0.0f; vet[n,m] = 0.0f;
+                roundParticle.perimeterFluidVel[m,0] = 0f;
+                roundParticle.perimeterFluidVel[m,1] = 0f;
                 // 固体表面の速度を計算
-                for(int i = (int)xe[n,m] - 3; i < (int)xe[n,m] + 3; i++)
+                // for(int i = (int)xe[n,m] - 3; i < (int)xe[n,m] + 3; i++)
+                // {
+                //     for(int j = (int)ye[n,m] - 3; j < (int)ye[n,m] + 3; j++)
+                //     {
+                for(int i = (int)roundParticle.perimeterPos[m,0] - 3; i < (int)roundParticle.perimeterPos[m,0] + 3; i++)
                 {
-                    for(int j = (int)ye[n,m] - 3; j < (int)ye[n,m] + 3; j++)
+                    for(int j = (int)roundParticle.perimeterPos[m,1] - 3; j < (int)roundParticle.perimeterPos[m,1] + 3; j++)
                     {
-                        tmp1 = Mathf.Abs(xe[n,m] - (float)i);
-                        tmp2 = Mathf.Abs(ye[n,m] - (float)j);
+                        tmp1 = Mathf.Abs(roundParticle.perimeterPos[m,0] - (float)i);
+                        tmp2 = Mathf.Abs(roundParticle.perimeterPos[m,1] - (float)j);
                         if(tmp1 <= 2.0f)
                         {
                             tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
@@ -348,21 +342,29 @@ public class IBLBMSingle : MonoBehaviour
                         }
                         if((j<DIM_Y&&j>=0) && (i<DIM_X&&i>=0))
                         {
-                            uet[n,m] += u[i,j]*tmp3;
-                            vet[n,m] += v[i,j]*tmp3;
+                            // uet[n,m] += u[i,j]*tmp3;
+                            // vet[n,m] += v[i,j]*tmp3;
+                            roundParticle.perimeterFluidVel[m,0] += u[i,j]*tmp3;
+                            roundParticle.perimeterFluidVel[m,1] += v[i,j]*tmp3;
                         }
                     } 
                 }
-                fxe[n,m] = ue[n,m] - uet[n,m];
-                fye[n,m] = ve[n,m] - vet[n,m];
-                // 固体が外部に与える力を計算
-                for(int i = (int)xe[n,m] - 3; i < (int)xe[n,m] + 3; i++)
-                {
-                    for(int j = (int)ye[n,m] - 3; j < (int)ye[n,m] + 3; j++)
-                    {
-                        tmp1 = Mathf.Abs(xe[n,m] - (float)i);
-                        tmp2 = Mathf.Abs(ye[n,m] - (float)j);
+                // fxe[n,m] = ue[n,m] - uet[n,m];
+                // fye[n,m] = ve[n,m] - vet[n,m];
+                roundParticle.forceOnPerimeter[m,0] = roundParticle.perimeterVel[m,0] - roundParticle.perimeterFluidVel[m,0];
+                roundParticle.forceOnPerimeter[m,1] = roundParticle.perimeterVel[m,1] - roundParticle.perimeterFluidVel[m,1];
 
+                // 固体が外部に与える力を計算
+                // for(int i = (int)xe[n,m] - 3; i < (int)xe[n,m] + 3; i++)
+                // {
+                //     for(int j = (int)ye[n,m] - 3; j < (int)ye[n,m] + 3; j++)
+                //     {
+                for(int i = (int)roundParticle.perimeterPos[m,0] - 3; i < (int)roundParticle.perimeterPos[m,0] + 3; i++)
+                {
+                    for(int j = (int)roundParticle.perimeterPos[m,1] - 3; j < (int)roundParticle.perimeterPos[m,1] + 3; j++)
+                    {
+                        tmp1 = Mathf.Abs(roundParticle.perimeterPos[m,0] - (float)i);
+                        tmp2 = Mathf.Abs(roundParticle.perimeterPos[m,1] - (float)j);
                         if(tmp1 <= 2.0f)
                         {
                             tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
@@ -381,38 +383,177 @@ public class IBLBMSingle : MonoBehaviour
                         }
                         if((j<DIM_Y&&j>=0) && (i<DIM_X&&i>=0))
                         {
-                            fx[i,j] += fxe[n,m] * tmp3 * 2.0f*Mathf.PI*rp/(float)ne;
-                            fy[i,j] += fye[n,m] * tmp3 * 2.0f*Mathf.PI*rp/(float)ne;
+                            fx[i,j] += roundParticle.forceOnPerimeter[m,0] * tmp3 * 2.0f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;
+                            fy[i,j] += roundParticle.forceOnPerimeter[m,1] * tmp3 * 2.0f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;
                         }
                     } 
                 }
-                fxp[n] += fxe[n,m];
-                fyp[n] += fye[n,m];
-                torq[n] = torq[n] + fye[n,m]*(xe[n,m] - xp[n]) - fxe[n,m]*(ye[n,m] - yp[n]);
+                roundParticle.forceFromFluid[0] += roundParticle.forceOnPerimeter[m,0];
+                roundParticle.forceFromFluid[1] += roundParticle.forceOnPerimeter[m,1];
+                roundParticle.torque += roundParticle.forceOnPerimeter[m,1] * (roundParticle.perimeterPos[m,0] - roundParticle.pos[0]) 
+                                        - roundParticle.forceOnPerimeter[m,0] * (roundParticle.perimeterPos[m,1] - roundParticle.pos[1]);
+                // torq[n] = torq[n] + fye[n,m]*(xe[n,m] - xp[n]) - fxe[n,m]*(ye[n,m] - yp[n]);
             } 
-            fxp[n] =  -fxp[n]*2.0f*Mathf.PI*rp/(float)ne;
-            fyp[n] =  -fyp[n]*2.0f*Mathf.PI*rp/(float)ne;
-            torq[n] = -torq[n]*2.0f*Mathf.PI*rp/(float)ne;
-            up[n]  = (1.0f + 1.0f/rhop)*up1[n]    - 1.0f/rhop*up2[n]
-                    + (fxp[n] + fxc[n])/rhop/mp + (1.0f - 1.0f/rhop)*gx;
-            vp[n]  = (1.0f + 1.0f/rhop)*vp1[n]    - 1.0f/rhop*vp2[n]
-                    + (fyp[n] + fyc[n])/rhop/mp + (1.0f - 1.0f/rhop)*gy;
-            omega[n]= (1.0f + 1.0f/rhop)*omega1[n] - 1.0f/rhop*omega2[n]
-                    + torq[n]/rhop/iip;
-                xp[n]=    xp[n] + (   up[n] +    up1[n])*0.5f;
-                yp[n]=    yp[n] + (   vp[n] +    vp1[n])*0.5f;
-            theta[n]= theta[n] + (omega[n] + omega1[n])*0.5f;
-                up2[n] =    up1[n];    up1[n] =    up[n];
-                vp2[n] =    vp1[n];    vp1[n] =    vp[n];
-            omega2[n] = omega1[n]; omega1[n] = omega[n]; 
-            for(int m = 0; m <ne ; m++) 
+
+            // fxp[n] =  -fxp[n]*2.0f*Mathf.PI*rp/(float)ne;
+            // fyp[n] =  -fyp[n]*2.0f*Mathf.PI*rp/(float)ne;
+            // torq[n] = -torq[n]*2.0f*Mathf.PI*rp/(float)ne;
+
+            roundParticle.forceFromFluid[0] *= -2f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;  
+            roundParticle.forceFromFluid[1] *= -2f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;  
+            roundParticle.torque *= -2f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;  
+
+            for (int i = 0; i < 2; i++)
             {
-                xe[n,m] = xp[n] + rp*Mathf.Cos(2.0f*Mathf.PI*m/(float)ne);
-                ye[n,m] = yp[n] + rp*Mathf.Sin(2.0f*Mathf.PI*m/(float)ne);
-                ue[n,m] = up[n]  - omega[n]*(ye[n,m] - yp[n]);
-                ve[n,m] = vp[n]  + omega[n]*(xe[n,m] - xp[n]);
-            } 
+                roundParticle.vel[i] = (1f + 1f/roundParticle.density) * roundParticle.prevVel1[i]
+                                        - 1f/roundParticle.density * roundParticle.prevVel2[i]
+                                        + (roundParticle.forceFromFluid[i] + roundParticle.forceFromCollisions[i])/roundParticle.mass
+                                        + (1f - 1f/roundParticle.density) * gravity[i];
+                roundParticle.pos[i] += (roundParticle.vel[i] + roundParticle.prevVel1[i])/2f;
+                roundParticle.prevVel2[i] = roundParticle.prevVel1[i];
+                roundParticle.prevVel1[i] = roundParticle.vel[i];
+            }
+            
+            // up[n]  = (1.0f + 1.0f/rhop)*up1[n]    - 1.0f/rhop*up2[n]
+            //         + (fxp[n] + fxc[n])/rhop/mp + (1.0f - 1.0f/rhop)*gx;
+            // vp[n]  = (1.0f + 1.0f/rhop)*vp1[n]    - 1.0f/rhop*vp2[n]
+            //         + (fyp[n] + fyc[n])/rhop/mp + (1.0f - 1.0f/rhop)*gy;
+            // omega[n]= (1.0f + 1.0f/rhop)*omega1[n] - 1.0f/rhop*omega2[n]
+            //         + torq[n]/rhop/iip;
+
+            roundParticle.omega = (1f + 1f/roundParticle.density) * roundParticle.prevOmega1 
+                                - 1f/roundParticle.density * roundParticle.prevOmega2
+                                + roundParticle.torque/roundParticle.momentOfInertia;
+            roundParticle.theta += (roundParticle.omega - roundParticle.prevOmega1)/2f;
+
+            roundParticle.prevOmega2 = roundParticle.prevOmega1;
+            roundParticle.prevOmega1 = roundParticle.omega;
+                // xp[n]=    xp[n] + (   up[n] +    up1[n])*0.5f;
+                // yp[n]=    yp[n] + (   vp[n] +    vp1[n])*0.5f;
+            // theta[n]= theta[n] + (omega[n] + omega1[n])*0.5f;
+                // up2[n] =    up1[n];    up1[n] =    up[n];
+                // vp2[n] =    vp1[n];    vp1[n] =    vp[n];
+            // omega2[n] = omega1[n]; omega1[n] = omega[n]; 
+            // for(int m = 0; m <roundParticle.perimeterPointCount ; m++) 
+            // {
+            //     xe[n,m] = xp[n] + rp*Mathf.Cos(2.0f*Mathf.PI*m/(float)ne);
+            //     ye[n,m] = yp[n] + rp*Mathf.Sin(2.0f*Mathf.PI*m/(float)ne);
+            //     ue[n,m] = up[n]  - omega[n]*(ye[n,m] - yp[n]);
+            //     ve[n,m] = vp[n]  + omega[n]*(xe[n,m] - xp[n]);
+            // } 
+            roundParticle.UpdatePerimeter();
         }
+        // for(int n = 0; n < particleCount; n++) 
+        // { 
+        //     fxc[n] = 0.0f;
+        //     fyc[n] = 0.0f;
+        //     tmp1 = Mathf.Abs(yp[n] + rp); 
+        //     if(tmp1 < 2.0f*rp + zeta){
+        //         fyc[n] += (yp[n] + rp)*(2.0f*rp - tmp1 + zeta)*(2.0f*rp - tmp1 + zeta)/epsw;
+        //     }
+        //     tmp1 = Mathf.Abs(xp[n] + rp);
+        //     if(tmp1 < 2.0f*rp + zeta){
+        //         fxc[n] += (xp[n] + rp)*(2.0f*rp - tmp1 + zeta)*(2.0f*rp - tmp1 + zeta)/epsw;
+        //     }
+        //     tmp1 = Mathf.Abs((DIM_X-1-xp[n]) + rp);
+        //     if(tmp1 < 2.0f*rp + zeta){
+        //         fxc[n] -= ((DIM_X-1-xp[n]) + rp)*(2.0f*rp - tmp1 + zeta)*(2.0f*rp - tmp1 + zeta)/epsw;
+        //     }
+
+        //     fxp[n] = 0.0f; fyp[n] = 0.0f; torq[n] = 0.0f;
+        //     for(int m = 0; m < ne ; m++) 
+        //     {
+        //         uet[n,m] = 0.0f; vet[n,m] = 0.0f;
+        //         // 固体表面の速度を計算
+        //         for(int i = (int)xe[n,m] - 3; i < (int)xe[n,m] + 3; i++)
+        //         {
+        //             for(int j = (int)ye[n,m] - 3; j < (int)ye[n,m] + 3; j++)
+        //             {
+        //                 tmp1 = Mathf.Abs(xe[n,m] - (float)i);
+        //                 tmp2 = Mathf.Abs(ye[n,m] - (float)j);
+        //                 if(tmp1 <= 2.0f)
+        //                 {
+        //                     tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
+        //                 } 
+        //                 else 
+        //                 {
+        //                     tmp3 = 0.0f;
+        //                 }
+        //                 if(tmp2 <= 2.0f)
+        //                 {
+        //                     tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp2/2.0f))/4.0f*tmp3;
+        //                 } 
+        //                 else 
+        //                 {
+        //                     tmp3 = 0.0f;
+        //                 }
+        //                 if((j<DIM_Y&&j>=0) && (i<DIM_X&&i>=0))
+        //                 {
+        //                     uet[n,m] += u[i,j]*tmp3;
+        //                     vet[n,m] += v[i,j]*tmp3;
+        //                 }
+        //             } 
+        //         }
+        //         fxe[n,m] = ue[n,m] - uet[n,m];
+        //         fye[n,m] = ve[n,m] - vet[n,m];
+        //         // 固体が外部に与える力を計算
+        //         for(int i = (int)xe[n,m] - 3; i < (int)xe[n,m] + 3; i++)
+        //         {
+        //             for(int j = (int)ye[n,m] - 3; j < (int)ye[n,m] + 3; j++)
+        //             {
+        //                 tmp1 = Mathf.Abs(xe[n,m] - (float)i);
+        //                 tmp2 = Mathf.Abs(ye[n,m] - (float)j);
+
+        //                 if(tmp1 <= 2.0f)
+        //                 {
+        //                     tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
+        //                 } 
+        //                 else 
+        //                 {
+        //                     tmp3 = 0.0f;
+        //                 }
+        //                 if(tmp2 <= 2.0f)
+        //                 {
+        //                     tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp2/2.0f))/4.0f*tmp3;
+        //                 } 
+        //                 else 
+        //                 {
+        //                     tmp3 = 0.0f;
+        //                 }
+        //                 if((j<DIM_Y&&j>=0) && (i<DIM_X&&i>=0))
+        //                 {
+        //                     fx[i,j] += fxe[n,m] * tmp3 * 2.0f*Mathf.PI*rp/(float)ne;
+        //                     fy[i,j] += fye[n,m] * tmp3 * 2.0f*Mathf.PI*rp/(float)ne;
+        //                 }
+        //             } 
+        //         }
+        //         fxp[n] += fxe[n,m];
+        //         fyp[n] += fye[n,m];
+        //         torq[n] = torq[n] + fye[n,m]*(xe[n,m] - xp[n]) - fxe[n,m]*(ye[n,m] - yp[n]);
+        //     } 
+        //     fxp[n] =  -fxp[n]*2.0f*Mathf.PI*rp/(float)ne;
+        //     fyp[n] =  -fyp[n]*2.0f*Mathf.PI*rp/(float)ne;
+        //     torq[n] = -torq[n]*2.0f*Mathf.PI*rp/(float)ne;
+        //     up[n]  = (1.0f + 1.0f/rhop)*up1[n]    - 1.0f/rhop*up2[n]
+        //             + (fxp[n] + fxc[n])/rhop/mp + (1.0f - 1.0f/rhop)*gx;
+        //     vp[n]  = (1.0f + 1.0f/rhop)*vp1[n]    - 1.0f/rhop*vp2[n]
+        //             + (fyp[n] + fyc[n])/rhop/mp + (1.0f - 1.0f/rhop)*gy;
+        //     omega[n]= (1.0f + 1.0f/rhop)*omega1[n] - 1.0f/rhop*omega2[n]
+        //             + torq[n]/rhop/iip;
+        //         xp[n]=    xp[n] + (   up[n] +    up1[n])*0.5f;
+        //         yp[n]=    yp[n] + (   vp[n] +    vp1[n])*0.5f;
+        //     theta[n]= theta[n] + (omega[n] + omega1[n])*0.5f;
+        //         up2[n] =    up1[n];    up1[n] =    up[n];
+        //         vp2[n] =    vp1[n];    vp1[n] =    vp[n];
+        //     omega2[n] = omega1[n]; omega1[n] = omega[n]; 
+        //     for(int m = 0; m <ne ; m++) 
+        //     {
+        //         xe[n,m] = xp[n] + rp*Mathf.Cos(2.0f*Mathf.PI*m/(float)ne);
+        //         ye[n,m] = yp[n] + rp*Mathf.Sin(2.0f*Mathf.PI*m/(float)ne);
+        //         ue[n,m] = up[n]  - omega[n]*(ye[n,m] - yp[n]);
+        //         ve[n,m] = vp[n]  + omega[n]*(xe[n,m] - xp[n]);
+        //     } 
+        // }
 //         int n,m,i,j;
 //             for(n = 0; n < particleCount; n++) { for(m = 0; m <ne ; m++) {
 //       uet[n,m] = 0.0f; vet[n,m] = 0.0f;
