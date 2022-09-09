@@ -577,12 +577,12 @@ MonoBehaviour:
   minPhi: 0
   maxChe: 0
   minChe: 0
-  rhop: 2
-  rp: 12.5
+  particleDensity: 2.5
+  particleRadius: 12.5
   epsw: 100
   zeta: 1
   tau: 0.53
-  loopCount: 1
+  loopCount: 5
   gRate: 5
 --- !u!4 &2104146839
 Transform:
