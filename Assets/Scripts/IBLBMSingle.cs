@@ -127,7 +127,7 @@ public class IBLBMSingle : MonoBehaviour
         { 
             for(int j = 0; j < DIM_Y; j++)
             {
-                u[i,j] = 0.001f; v[i,j] = 0.0f;
+                u[i,j] = 0f; v[i,j] = 0.0f;
                 fx[i,j] = 0.0f; fy[i,j] = 0.0f;
                 rho[i,j] = 1.0f;
                 u2 = u[i,j]*u[i,j] + v[i,j]*v[i,j];  
