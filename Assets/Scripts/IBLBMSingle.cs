@@ -28,16 +28,9 @@ public class IBLBMSingle : MonoBehaviour
     float[] w = new float[9]{4f/9f,1f/9f,1f/9f,1f/9f,1f/9f,1f/36f,1f/36f,1f/36f,1f/36f};
     float[,] rho, u, v, speed, fx ,fy;
     float[,,] f, f0, ftmp;
-    float tmp,u2,nu,tmp1, tmp2, tmp3,dt,mp,iip;
-    float[] xp, yp, xp1, yp1, fxp, fyp;
-    float[] up, vp, up1, vp1, up2, vp2;
-    float[] theta, torq, omega, omega1, omega2;
-    float[] fxc, fyc;
-    float[,] xe, ye, fxe, fye;
-    float[,] uet, vet, ue, ve;
-    public float rhop = 1.25f;
-    public float rp = 12f;
-    int ne;
+    float tmp,u2,nu,tmp1, tmp2, tmp3,dt;
+    public float particleDensity = 1.25f;
+    public float particleRadius = 12f;
     public float epsw = 100.0f, zeta = 1.0f, tau = 0.53f;
 
     public int loopCount = 1;
@@ -62,63 +55,14 @@ public class IBLBMSingle : MonoBehaviour
         f = new float[9,DIM_X,DIM_Y];
         f0 = new float[9,DIM_X,DIM_Y];
         ftmp = new float[9,DIM_X,DIM_Y];
-        xp=new float[particleCount];
-        yp=new float[particleCount];
-        xp1=new float[particleCount];
-        yp1=new float[particleCount];
-        fxp=new float[particleCount];
-        fyp=new float[particleCount];
-        up=new float[particleCount];
-        vp=new float[particleCount];
-        up1=new float[particleCount];
-        vp1=new float[particleCount];
-        up2=new float[particleCount];
-        vp2=new float[particleCount];
-        theta=new float[particleCount];
-        torq=new float[particleCount];
-        omega=new float[particleCount];
-        omega1=new float[particleCount];
-        omega2=new float[particleCount];
-        fxc=new float[particleCount];
-        fyc = new float[particleCount];
-        
 
         nu = (tau - 0.5f)/3.0f;
-        ne = (int)(2.0f * Mathf.PI * rp * 2.0f);
 
-        xe=new float[particleCount,ne];
-        ye=new float[particleCount,ne];
-        fxe=new float[particleCount,ne];
-        fye=new float[particleCount,ne];
-        uet=new float[particleCount,ne];
-        vet=new float[particleCount,ne];
-        ue=new float[particleCount,ne];
-        ve=new float[particleCount,ne];
-
-        mp = Mathf.PI*rp*rp;
-        iip = Mathf.PI*rp*rp*rp*rp*0.5f;
         dt = nu/((float)(DIM_X-1)/2.0f)/((float)(DIM_X-1)/2.0f)/0.1f;
         gravity[1] = -gRate*981.0f*(float)(DIM_X-1)*dt*dt;
         gravity[0] = 0.0f;
-        for(int n = 0; n < particleCount; n++) {
-            up[n] = 0f;    up1[n] = 0.0f;    up2[n] = 0.0f;
-            vp[n] = 0.0f;    vp1[n] = 0.0f;    vp2[n] = 0.0f;
-            omega[n] = 0.0f; omega1[n] = 0.0f; omega2[n] = 0.0f;
-            fxp[n] = 0.0f;    fyp[n] = 0.0f;   torq[n] = 0.0f;  theta[n] = 0.0f;
-        }
 
-        xp[0] = 50f;
-        yp[0] = 300f;
-        for(int n = 0; n < particleCount; n++) 
-        { 
-            for(int m = 0; m <ne ; m++) 
-            {
-                xe[n,m] = xp[n] + rp*Mathf.Cos(2.0f*Mathf.PI*(float)m/(float)ne);
-                ye[n,m] = yp[n] + rp*Mathf.Sin(2.0f*Mathf.PI*(float)m/(float)ne);
-                fxe[n,m] = 0.0f; fye[n,m] = 0.0f; ue[n,m] = 0.0f; ve[n,m] = 0.0f;
-            } 
-        } 
-        roundParticle = new RoundParticle(rhop,rp,new float[2]{50f,300f});
+        roundParticle = new RoundParticle(particleDensity,particleRadius,new float[2]{50f,300f});
         maxSpeed = 0f;
         minSpeed = Mathf.Infinity;
         maxRho = 0f;
@@ -291,12 +235,24 @@ public class IBLBMSingle : MonoBehaviour
     {
         for(int n = 0; n < 1; n++) 
         { 
-            // tmp1 = Mathf.Abs(roundParticle.pos[1] + roundParticle.radius); 
-            // roundParticle.forceFromCollisions[0] = 0f;
-            // if(tmp1 < 2.0f*roundParticle.radius + zeta){
-            //     roundParticle.forceFromCollisions[1] = ((roundParticle.pos[1] + roundParticle.radius)/tmp1)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
-            // }
-            // else roundParticle.forceFromCollisions[1] = 0f;
+            roundParticle.forceFromCollisions[0] = 0f;
+            roundParticle.forceFromCollisions[1] = 0f;
+            tmp1 = Mathf.Abs(roundParticle.pos[1] + roundParticle.radius); 
+            if(tmp1 < 2.0f*roundParticle.radius + zeta){
+                roundParticle.forceFromCollisions[1] = (roundParticle.pos[1] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
+            }
+            tmp1 = Mathf.Abs(DIM_Y-1-roundParticle.pos[1] + roundParticle.radius); 
+            if(tmp1 < 2.0f*roundParticle.radius + zeta){
+                roundParticle.forceFromCollisions[1] = -(DIM_Y-1-roundParticle.pos[1] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
+            }
+            tmp1 = Mathf.Abs(roundParticle.pos[0] + roundParticle.radius); 
+            if(tmp1 < 2.0f*roundParticle.radius + zeta){
+                roundParticle.forceFromCollisions[0] = (roundParticle.pos[0] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
+            }
+            tmp1 = Mathf.Abs(DIM_X-1-roundParticle.pos[0] + roundParticle.radius); 
+            if(tmp1 < 2.0f*roundParticle.radius + zeta){
+                roundParticle.forceFromCollisions[0] = -(DIM_X-1-roundParticle.pos[0] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
+            }
 
             // fxc[n] = 0.0f;
             // fyc[n] = 0.0f;
