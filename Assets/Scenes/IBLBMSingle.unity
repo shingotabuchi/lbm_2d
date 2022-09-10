@@ -565,25 +565,26 @@ MonoBehaviour:
   vectorField: {fileID: 586974043}
   vectorFieldOn: 0
   mode: 0
-  normalizeHeatMap: 0
+  fixHeatMapMax: 0
+  fixHeatMapMin: 0
+  fixedMaxSpeed: 0.6
+  fixedMaxRho: 1.01
+  fixedMinSpeed: 0
+  fixedMinRho: 0
   DIM_X: 100
   DIM_Y: 400
-  particleCount: 1
+  particleCount: 49
   maxRho: 0
   minRho: 0
   maxSpeed: 0
   minSpeed: 0
-  maxPhi: 0
-  minPhi: 0
-  maxChe: 0
-  minChe: 0
-  particleDensity: 2.5
-  particleRadius: 12.5
-  epsw: 100
+  particleDensity: 5
+  particleRadius: 3
+  epsw: 5
   zeta: 1
-  tau: 0.53
-  loopCount: 5
-  gRate: 5
+  tau: 5.56
+  loopCount: 3
+  gRate: 100
 --- !u!4 &2104146839
 Transform:
   m_ObjectHideFlags: 0
