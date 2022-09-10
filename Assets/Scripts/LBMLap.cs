@@ -34,6 +34,7 @@ public class LBMLap : MonoBehaviour
     public float taug = 0.7f;
     public float gamma = 10.0f, wid = 5.0f, phi0 = 1.0f;
     public float sig = 0.0001f;
+    public float radius = 12f;
 
     public int loopCount = 1;
 
@@ -79,7 +80,7 @@ public class LBMLap : MonoBehaviour
                 u[i,j] = 0.0f; v[i,j] = 0.0f; 
                 rho[i,j] = 1.0f;
                 tmp = Mathf.Sqrt(Mathf.Pow(((float)i - (float)(DIM_X-1)*0.5f),2) + Mathf.Pow(((float)j - (float)(DIM_Y-1)*0.5f),2));
-                phi[i,j] = -phi0*(float)Math.Tanh(2.0f*(tmp - (float)(DIM_X-1)*0.25f)/wid);
+                phi[i,j] = -phi0*(float)Math.Tanh(2.0f*(tmp - radius)/wid);
             }
         }
 
@@ -124,6 +125,7 @@ public class LBMLap : MonoBehaviour
     {
         Collision();
         Streaming();
+        Boundaries();
         UpdateSpeedAndPotentials();
     }
 
@@ -231,6 +233,40 @@ public class LBMLap : MonoBehaviour
                     // }
                 } 
             }
+        }
+    }
+
+    void Boundaries()
+    {
+        for (int j = 0; j < DIM_Y; j++)
+        {
+            f[1,0,j] = f[3,0,j];
+            f[5,0,j] = f[7,0,j];
+            f[8,0,j] = f[6,0,j];
+            f[3,DIM_X-1,j] = f[1,DIM_X-1,j]; 
+            f[7,DIM_X-1,j] = f[5,DIM_X-1,j]; 
+            f[6,DIM_X-1,j] = f[8,DIM_X-1,j]; 
+
+            g[1,0,j] = g[3,0,j];
+            g[5,0,j] = g[7,0,j];
+            g[8,0,j] = g[6,0,j];
+            g[3,DIM_X-1,j] = g[1,DIM_X-1,j];
+            g[7,DIM_X-1,j] = g[5,DIM_X-1,j];
+            g[6,DIM_X-1,j] = g[8,DIM_X-1,j];
+        }
+        for(int i = 0; i < DIM_X; i++){
+            f[4,i,DIM_Y-1] = f[2,i,DIM_Y-1];
+            f[7,i,DIM_Y-1] = f[5,i,DIM_Y-1];
+            f[8,i,DIM_Y-1] = f[6,i,DIM_Y-1]; 
+            f[2,i,0] = f[4,i,0]; 
+            f[5,i,0] = f[7,i,0]; 
+            f[6,i,0] = f[8,i,0]; 
+            g[4,i,DIM_Y-1] = g[2,i,DIM_Y-1];
+            g[7,i,DIM_Y-1] = g[5,i,DIM_Y-1];
+            g[8,i,DIM_Y-1] = g[6,i,DIM_Y-1];
+            g[2,i,0] = g[4,i,0]; 
+            g[5,i,0] = g[7,i,0]; 
+            g[6,i,0] = g[8,i,0]; 
         }
     }
 
