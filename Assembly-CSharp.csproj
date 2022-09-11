@@ -56,8 +56,12 @@
      <Compile Include="Assets\Scripts\IBLBMDKT.cs" />
      <Compile Include="Assets\Scripts\D2Q4AdvectionMain.cs" />
      <Compile Include="Assets\Scripts\D2Q4ComputeShader.cs" />
+     <Compile Include="Assets\Scripts\LBMNatConvComputeShader.cs" />
+     <Compile Include="Assets\Scripts\LBMNatConv1DArray.cs" />
+     <Compile Include="Assets\Scripts\LBMNatConvMDArray.cs" />
      <None Include="Assets\ComputeShaders\D2Q4Test.compute" />
      <None Include="Assets\Scripts\data.txt" />
+     <None Include="Assets\ComputeShaders\LBMNatConv.compute" />
     <Reference Include="UnityEngine">
         <HintPath>C:\2020.3.31f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
     </Reference>

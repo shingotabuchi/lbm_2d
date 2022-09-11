@@ -1,0 +1,148 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel InitTempXGradient
+#pragma kernel Collision
+#pragma kernel Streaming
+#pragma kernel AdiabaticBoundaryX
+#pragma kernel AdiabaticBoundaryY
+#pragma kernel CalculateTempAndSpeed
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<float> rho, u, v, temp,speed,f,g,ftmp,gtmp;
+RWStructuredBuffer<float> minMaxTempAndSpeed;
+// float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+// float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+// float wg[5] = {1.0/3.0,1.0/6.0,1.0/6.0,1.0/6.0,1.0/6.0};
+// float wf[9] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
+
+float omega,wallTemp1,wallTemp2,wallTemp3,wallTemp4;
+float tauf,taug,rbetag;
+int DIM_X,DIM_Y;
+
+[numthreads(64,1,1)]
+void InitTempXGradient (uint3 id : SV_DispatchThreadID)
+{
+    float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    float wg[5] = {1.0/3.0,1.0/6.0,1.0/6.0,1.0/6.0,1.0/6.0};
+    float wf[9] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
+    float u2,f0,g0,tmp;
+    u[id.x] = 0.0; v[id.x] = 0.0; 
+    rho[id.x] = 1.0;
+    temp[id.x] = (float)(DIM_X-1 - id.x%DIM_X)/(float)(DIM_X-1 - 1);
+
+    u2 = u[id.x]*u[id.x] + v[id.x]*v[id.x];   
+
+    for (int k = 0; k < 9; k++)
+    {
+        tmp = cx[k]*u[id.x] + cy[k]*v[id.x];     
+        // f0 = wf[k]*rho[id.x]*(1.0 +3.0*tmp +9.0/2.0*tmp*tmp -3.0/2.0*u2);
+        f0 = wf[k]*1.0;
+        f[k + (id.x)*9] = f0;
+        if(k<5)
+        {
+            g0 = wg[k]*temp[id.x]*(1.0 + 3.0*tmp);
+            g[k + (id.x)*5] = g0;
+        }
+    }
+}
+
+[numthreads(64,1,1)]
+void Collision (uint3 id : SV_DispatchThreadID)
+{
+    float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    float wg[5] = {1.0/3.0,1.0/6.0,1.0/6.0,1.0/6.0,1.0/6.0};
+    float wf[9] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
+    float u2,f0,g0,tmp,fx,fy;
+    u2 = u[id.x]*u[id.x] + v[id.x]*v[id.x];   
+    fx = 0.0; fy = rbetag*(temp[id.x] - 0.5);
+    for (int k = 0; k < 9; k++)
+    {
+        tmp = cx[k]*u[id.x] + cy[k]*v[id.x];     
+        f0 = wf[k]*rho[id.x]*(1.0 +3.0*tmp +9.0/2.0*tmp*tmp -3.0/2.0*u2);
+        f[k + (id.x)*9] = f[k + (id.x)*9] - (f[k + (id.x)*9] - f0)/tauf + 3.0*wf[k]*(cx[k]*fx + cy[k]*fy);
+        ftmp[k + (id.x)*9] = f[k + (id.x)*9];
+        if(k<5)
+        {
+            g0 = wg[k]*temp[id.x]*(1.0 + 3.0*tmp);
+            g[k + (id.x)*5] = g[k + (id.x)*5] - (g[k + (id.x)*5] - g0)/taug;
+            gtmp[k + (id.x)*5] = g[k + (id.x)*5];
+        }
+    }
+}
+
+[numthreads(64,1,1)]
+void Streaming (uint3 id : SV_DispatchThreadID)
+{
+    float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    for (int k = 0; k < 9; k++)
+    {
+        int im = id.x%DIM_X + (int)cx[k]; 
+        int jm = id.x/DIM_X + (int)cy[k];
+        if((jm!=DIM_Y&&jm!=-1) && (im!=DIM_X&&im!=-1))
+        {
+            f[k + (im + jm*DIM_X)*9] = ftmp[k + (id.x)*9];
+            if(k<5)
+            g[k + (im + jm*DIM_X)*5] = gtmp[k + (id.x)*5];
+        }
+    }
+}
+
+[numthreads(64,1,1)]
+void AdiabaticBoundaryX (uint3 id : SV_DispatchThreadID)
+{
+    f[4+ (id.x + (DIM_Y-1)*DIM_X)*9] = f[2+ (id.x + (DIM_Y-1)*DIM_X)*9];
+    f[7+ (id.x + (DIM_Y-1)*DIM_X)*9] = f[5+ (id.x + (DIM_Y-1)*DIM_X)*9];
+    f[8+ (id.x + (DIM_Y-1)*DIM_X)*9] = f[6+ (id.x + (DIM_Y-1)*DIM_X)*9]; 
+    f[2+ (id.x + 0*DIM_X)*9] = f[4+ (id.x + 0*DIM_X)*9]; 
+    f[5+ (id.x + 0*DIM_X)*9] = f[7+ (id.x + 0*DIM_X)*9]; 
+    f[6+ (id.x + 0*DIM_X)*9] = f[8+ (id.x + 0*DIM_X)*9]; 
+    for (int k = 0; k < 5; k++)
+    {
+        g[k+ (id.x + (DIM_Y-1)*DIM_X)*5] = g[k+ (id.x + (DIM_Y-2)*DIM_X)*5];
+        g[k+ (id.x + 0*DIM_X)*5] = g[k+ (id.x + 1*DIM_X)*5];
+    }
+}
+[numthreads(64,1,1)]
+void AdiabaticBoundaryY (uint3 id : SV_DispatchThreadID)
+{
+    f[1 + (0 + id.x*DIM_X)*9] = f[3 + (0 + id.x*DIM_X)*9];
+    f[5 + (0 + id.x*DIM_X)*9] = f[7 + (0 + id.x*DIM_X)*9];
+    f[8 + (0 + id.x*DIM_X)*9] = f[6 + (0 + id.x*DIM_X)*9];
+    f[3 + (DIM_X-1 + id.x*DIM_X)*9] = f[1 + (DIM_X-1 + id.x*DIM_X)*9]; 
+    f[7 + (DIM_X-1 + id.x*DIM_X)*9] = f[5 + (DIM_X-1 + id.x*DIM_X)*9]; 
+    f[6 + (DIM_X-1 + id.x*DIM_X)*9] = f[8 + (DIM_X-1 + id.x*DIM_X)*9]; 
+    for (int k = 0; k < 5; k++)
+    {
+        g[k + (0 + id.x*DIM_X)*5] = g[k+ (1 + id.x*DIM_X)*5];
+        g[k + (DIM_X-1 + id.x*DIM_X)*5] = g[k+ (DIM_X-2 + id.x*DIM_X)*5];
+    }
+}
+
+[numthreads(64,1,1)]
+void CalculateTempAndSpeed (uint3 id : SV_DispatchThreadID)
+{
+    float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    u[id.x] = 0; v[id.x] = 0;
+    rho[id.x] = f[0+(id.x)*9]; 
+    temp[id.x] =  g[0+(id.x)*5];
+    for(int k = 1; k <= 8; k++)
+    {
+        rho[id.x] = rho[id.x] + f[k + (id.x)*9];
+        u[id.x] =   u[id.x] + f[k + (id.x)*9]*cx[k];
+        v[id.x] =   v[id.x] + f[k + (id.x)*9]*cy[k];
+        if(k<5){
+        temp[id.x] =   temp[id.x] + g[k + (id.x)*5];}
+    } 
+    u[id.x] = u[id.x]/rho[id.x];
+    v[id.x] = v[id.x]/rho[id.x];
+    speed[id.x] = sqrt(u[id.x]*u[id.x] + v[id.x]*v[id.x]);
+    
+    // minMaxTempAndSpeed[0] = min(minMaxTempAndSpeed[0],temp[id.x]);
+    // minMaxTempAndSpeed[1] = max(minMaxTempAndSpeed[1],temp[id.x]);
+    // minMaxTempAndSpeed[2] = min(minMaxTempAndSpeed[2],speed[id.x]);
+    // minMaxTempAndSpeed[3] = max(minMaxTempAndSpeed[3],speed[id.x]);
+}
+    

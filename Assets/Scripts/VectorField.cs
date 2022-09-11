@@ -61,4 +61,35 @@ public class VectorField : MonoBehaviour
             }
         }
     }
+    public void UpdateVectors(float[] u, float[] v, int plotRes,float maxSpeed, bool on = true)
+    {
+        if(!on){
+            canvasTrans.transform.gameObject.SetActive(false);
+            return;
+        }
+        else canvasTrans.transform.gameObject.SetActive(true);
+        for (int i = 0; i <= resIntX; i++)
+        {
+            for (int j = 0; j <= resInt; j++)
+            {
+                // float U = u[(i*(int)(plotRes*aspectRatio-1))/resIntX + ((j*(plotRes-1))/resInt)*resIntX];
+                // float V = v[(i*(int)(plotRes*aspectRatio-1))/resIntX + ((j*(plotRes-1))/resInt)*resIntX];
+                float U = u[(i*(int)(plotRes*aspectRatio-1))/resIntX + ((j*(plotRes-1))/resInt)*(int)(plotRes*aspectRatio)];
+                float V = v[(i*(int)(plotRes*aspectRatio-1))/resIntX + ((j*(plotRes-1))/resInt)*(int)(plotRes*aspectRatio)];
+                if(!(U==0f&&V==0f))
+                {
+                    float rad = Mathf.Atan(V/U);
+                    if(U<0) rad += Mathf.PI;
+                    vectors[i,j].transform.rotation = Quaternion.Euler(0,0,(rad*180f)/Mathf.PI);
+                    float speed = Mathf.Sqrt(U*U + V*V);
+                    if(speed>Mathf.Epsilon)
+                    {
+                        vectors[i,j].GetComponent<RectTransform>().sizeDelta = new Vector2(1200,1200) * (speed/maxSpeed) * scale;
+                    }
+                    else vectors[i,j].GetComponent<RectTransform>().sizeDelta = new Vector2(0,0);
+                }
+                else vectors[i,j].GetComponent<RectTransform>().sizeDelta = new Vector2(0,0);
+            }
+        }
+    }
 }
