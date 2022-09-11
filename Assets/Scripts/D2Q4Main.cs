@@ -26,6 +26,7 @@ public class D2Q4Main : MonoBehaviour
     float dx = 1f;
     float dt = 1f;
     float csq,omega,feq;
+    public int loopCount = 1;
     void Start()
     {
         plotTexture = new Texture2D(resInt,resInt);
@@ -51,10 +52,9 @@ public class D2Q4Main : MonoBehaviour
         }
         UpdatePlot();
     }
-    
-    void Update()
+
+    void LBMStep()
     {
-        omega = 1f/(2f*alpha/(dt*csq)+0.5f);
         // Collision Process
         for (int i = 0; i < resInt; i++)
         {
@@ -150,6 +150,15 @@ public class D2Q4Main : MonoBehaviour
             {
                 rho[i,j]=f1[i,j]+f2[i,j]+f3[i,j]+f4[i,j];
             }
+        }
+    }
+    
+    void Update()
+    {
+        omega = 1f/(2f*alpha/(dt*csq)+0.5f);
+        for (int i = 0; i < loopCount; i++)
+        {
+            LBMStep();
         }
         UpdatePlot();
     }

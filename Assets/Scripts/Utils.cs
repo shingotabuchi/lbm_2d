@@ -28,6 +28,13 @@ public enum RTType
     MRT,
 }
 
+public enum InitialTemperatureDistribution
+{
+    AllZero,
+    XGradient,
+    YGradient,
+}
+
 public class RectObstacle
 {
     public int[] pos = new int[2];
@@ -83,7 +90,7 @@ public class RoundParticle
     public float volume;
     public float mass;
     public float momentOfInertia;
-    public RoundParticle(float _density,float _radius,float[] _initPos)
+    public RoundParticle(float _density,float _radius,float[] _initPos, float _initOmega = 0f)
     {
         density = _density;
         radius = _radius;
@@ -94,7 +101,7 @@ public class RoundParticle
         vel = new float[2]{0f,0f};
         prevVel1 = new float[2]{0f,0f};
         prevVel2 = new float[2]{0f,0f};
-        omega = 0f;
+        omega = _initOmega;
         theta = 0f;
         prevOmega1 = 0f;
         prevOmega2 = 0f;
@@ -110,10 +117,8 @@ public class RoundParticle
         {
             perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
             perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
-            // // perimeterVel[i,0] = vel[0] - omega*(perimeterPos[i,1] - pos[1]);
-            // // perimeterVel[i,1] = vel[1] + omega*(perimeterPos[i,0] - pos[0]);
-            perimeterVel[i,0] = 0f;
-            perimeterVel[i,1] = 0f;
+            perimeterVel[i,0] = vel[0] - omega*(perimeterPos[i,1] - pos[1]);
+            perimeterVel[i,1] = vel[1] + omega*(perimeterPos[i,0] - pos[0]);
             forceOnPerimeter[i,0] = 0f;
             forceOnPerimeter[i,1] = 0f;
             perimeterFluidVel[i,0] = 0f;
@@ -224,4 +229,6 @@ public class RoundParticle
     {
         return Mathf.Sqrt( (pos[0]-particle.pos[0])*(pos[0]-particle.pos[0]) + (pos[1]-particle.pos[1])*(pos[1]-particle.pos[1]) );
     }
+
+
 }

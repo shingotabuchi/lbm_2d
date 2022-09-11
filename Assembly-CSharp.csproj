@@ -45,14 +45,18 @@
      <Compile Include="Assets\Scripts\VectorField.cs" />
      <Compile Include="Assets\Scripts\FDMMain.cs" />
      <Compile Include="Assets\Scripts\D2Q5Main.cs" />
+     <Compile Include="Assets\Scripts\LBMCylinder.cs" />
      <Compile Include="Assets\Scripts\LBMLap.cs" />
+     <Compile Include="Assets\Scripts\LBMNatConvWithParticles.cs" />
      <Compile Include="Assets\Scripts\IBLBMSingle.cs" />
      <Compile Include="Assets\Scripts\LidDrivenCavity.cs" />
+     <Compile Include="Assets\Scripts\LBMPoiWithParticle.cs" />
      <Compile Include="Assets\Scripts\LBMNatConv.cs" />
      <Compile Include="Assets\Scripts\LBMTherm.cs" />
      <Compile Include="Assets\Scripts\IBLBMDKT.cs" />
      <Compile Include="Assets\Scripts\D2Q4AdvectionMain.cs" />
-     <Compile Include="Assets\Scripts\LBMPoiWithParticle.cs" />
+     <Compile Include="Assets\Scripts\D2Q4ComputeShader.cs" />
+     <None Include="Assets\ComputeShaders\D2Q4Test.compute" />
      <None Include="Assets\Scripts\data.txt" />
     <Reference Include="UnityEngine">
         <HintPath>C:\2020.3.31f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>

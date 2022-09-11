@@ -1,0 +1,79 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel D2Q4Init
+#pragma kernel D2Q4Collision
+#pragma kernel D2Q4Streaming
+#pragma kernel D2Q4ConstantBoundary
+#pragma kernel D2Q4GetRho
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<float> rho;
+RWStructuredBuffer<float> f;
+RWStructuredBuffer<float> ftmp;
+// RWStructuredBuffer<float> f1;
+// RWStructuredBuffer<float> f2;
+// RWStructuredBuffer<float> f3;
+// RWStructuredBuffer<float> f4;
+// RWStructuredBuffer<float> f1tmp;
+// RWStructuredBuffer<float> f2tmp;
+// RWStructuredBuffer<float> f3tmp;
+// RWStructuredBuffer<float> f4tmp;
+float omega,wallTemp1,wallTemp2,wallTemp3,wallTemp4;
+int resInt;
+
+[numthreads(64,1,1)]
+void D2Q4Init (uint3 id : SV_DispatchThreadID)
+{
+    rho[id.x] = 0.0;
+    f[0 + id.x*4] = 0.25*rho[id.x];
+    f[1 + id.x*4] = 0.25*rho[id.x];
+    f[2 + id.x*4] = 0.25*rho[id.x];
+    f[3 + id.x*4] = 0.25*rho[id.x];
+    
+    // f1[id.x] = 0.25*rho[id.x];
+    // f2[id.x] = 0.25*rho[id.x];
+    // f3[id.x] = 0.25*rho[id.x];
+    // f4[id.x] = 0.25*rho[id.x];
+}
+
+[numthreads(64,1,1)]
+void D2Q4Collision (uint3 id : SV_DispatchThreadID)
+{
+    f[0 + id.x*4] = omega*0.25*rho[id.x] + (1.0 - omega)*f[0 + id.x*4];
+    f[1 + id.x*4] = omega*0.25*rho[id.x] + (1.0 - omega)*f[1 + id.x*4];
+    f[2 + id.x*4] = omega*0.25*rho[id.x] + (1.0 - omega)*f[2 + id.x*4];
+    f[3 + id.x*4] = omega*0.25*rho[id.x] + (1.0 - omega)*f[3 + id.x*4];
+    ftmp[0 + id.x*4] = f[0 + id.x*4];
+    ftmp[1 + id.x*4] = f[1 + id.x*4];
+    ftmp[2 + id.x*4] = f[2 + id.x*4];
+    ftmp[3 + id.x*4] = f[3 + id.x*4];
+}
+
+[numthreads(64,1,1)]
+void D2Q4Streaming (uint3 id : SV_DispatchThreadID)
+{
+    if(0 + (id.x+1)*4 < resInt*resInt*4)                                  f[0 + (id.x+1)*4] = ftmp[0 + id.x*4];
+    if(1 + (id.x+resInt)*4 < resInt*resInt*4)                             f[1 + (id.x+resInt)*4] = ftmp[1 + id.x*4];
+    if(2 + (id.x-1)*4 < resInt*resInt*4 && 2 + (id.x-1)*4 >= 0)             f[2 + (id.x-1)*4] = ftmp[2 + id.x*4];
+    if(3 + (id.x-resInt)*4<resInt*resInt*4 && 3 + (id.x-resInt)*4 >= 0)   f[3 + (id.x-resInt)*4] = ftmp[3 + id.x*4];
+}
+
+[numthreads(64,1,1)]
+void D2Q4ConstantBoundary (uint3 id : SV_DispatchThreadID)
+{
+    f[0 + (id.x*resInt)*4] = 0.5f*wallTemp1 - f[1+(id.x*resInt)*4];
+    f[2 + (id.x*resInt)*4] = 0.5f*wallTemp1 - f[3+(id.x*resInt)*4];
+    f[1+(resInt-1 + id.x*resInt)*4] = 0.5f*wallTemp2 - f[0+(resInt-1 + id.x*resInt)*4];
+    f[2+(resInt-1 + id.x*resInt)*4] = 0.5f*wallTemp2 - f[3+(resInt-1 + id.x*resInt)*4];
+
+    f[0+(id.x + (resInt-1)*resInt)*4] = 0.5f*wallTemp3 - f[1+(id.x + (resInt-1)*resInt)*4];
+    f[3+(id.x + (resInt-1)*resInt)*4] = 0.5f*wallTemp3 - f[2+(id.x + (resInt-1)*resInt)*4];   
+    f[0+id.x*4] = 0.5f*wallTemp4 - f[1+id.x*4];
+    f[2+id.x*4] = 0.5f*wallTemp4 - f[3+id.x*4];
+}
+
+[numthreads(64,1,1)]
+void D2Q4GetRho (uint3 id : SV_DispatchThreadID)
+{
+    rho[id.x] = f[0 + id.x*4] + f[1 + id.x*4] + f[2 + id.x*4] + f[3 + id.x*4]; 
+}
+    

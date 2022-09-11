@@ -564,10 +564,10 @@ MonoBehaviour:
   plotImage: {fileID: 1587417685}
   vectorField: {fileID: 1403521466}
   vectorFieldOn: 0
-  mode: 1
+  mode: 4
   normalizeHeatMap: 1
-  DIM_X: 128
-  DIM_Y: 128
+  DIM_X: 32
+  DIM_Y: 32
   maxRho: 0
   minRho: 0
   maxSpeed: 0
@@ -582,8 +582,9 @@ MonoBehaviour:
   wid: 5
   phi0: 1
   sig: 0.0001
-  radius: 12
-  loopCount: 1
+  radius: 8
+  loopCount: 50
+  randomBunbo: 5
 --- !u!4 &1894890717
 Transform:
   m_ObjectHideFlags: 0

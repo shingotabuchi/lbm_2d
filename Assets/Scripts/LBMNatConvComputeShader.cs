@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LBMNatConv : MonoBehaviour
+public class LBMNatConvComputeShader : MonoBehaviour
 {
     public Image plotImage;
     Texture2D plotTexture;
