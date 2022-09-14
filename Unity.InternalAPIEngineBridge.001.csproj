@@ -282,6 +282,9 @@
     <Reference Include="log4netPlastic">
         <HintPath>C:\lbm_2d\Library\PackageCache\com.unity.collab-proxy@1.15.13\Lib\Editor\PlasticSCM\log4netPlastic.dll</HintPath>
     </Reference>
+    <Reference Include="DelaunatorSharp">
+        <HintPath>C:\lbm_2d\Library\PackageCache\com.nol1fe.delaunator@35c97bfdd2\Runtime\DelaunatorSharp.dll</HintPath>
+    </Reference>
     <Reference Include="netstandard">
         <HintPath>C:\2020.3.31f1\Editor\Data\NetStandard\ref\2.0.0\netstandard.dll</HintPath>
     </Reference>

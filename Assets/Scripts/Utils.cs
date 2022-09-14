@@ -67,10 +67,10 @@ public class RectObstacle
     }
 }
 
-public class RoundParticle
+public class Particle
 {
+    public GameObject obj;
     public float density;
-    public float radius;
     public float omega;//角速度
     public float theta;//角
     public float prevOmega1;//前フレームの角速度
@@ -90,6 +90,58 @@ public class RoundParticle
     public float volume;
     public float mass;
     public float momentOfInertia;
+
+    public void PlotParticlePerimeter(ref Color[] pixels, int dim_x, Color? color = null)
+    {
+        color ??= Color.white;
+        for(int i = 0; i < perimeterPointCount ; i++) 
+        {
+            if(
+                (int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x < pixels.Length
+                &&  
+                (int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x >= 0
+            )
+            pixels[(int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x] = (Color)color;
+        }
+    }
+        public void UpdatePosVel(float[]? gravity = null)
+    {
+        gravity ??= new float[2]{0f,0f};
+        for (int i = 0; i < 2; i++)
+        {
+            vel[i] = (1f + 1f/density) * prevVel1[i]
+                                    - 1f/density * prevVel2[i]
+                                    + (forceFromFluid[i] + forceFromCollisions[i])/mass
+                                    + (1f - 1f/density) * (float)gravity[i];
+            pos[i] += (vel[i] + prevVel1[i])/2f;
+            prevVel2[i] = prevVel1[i];
+            prevVel1[i] = vel[i];
+        }
+    }
+    public void UpdateOmegaTheta()
+    {
+        omega = (1f + 1f/density) * prevOmega1 
+                                - 1f/density * prevOmega2
+                                + torque/momentOfInertia;
+        theta += (omega - prevOmega1)/2f;
+        prevOmega2 = prevOmega1;
+        prevOmega1 = omega;
+    }
+
+}
+
+public class PolygonParticle : Particle
+{
+    public PolygonParticle(int _perimeterPointCount, float[,] _perimeterPos)
+    {
+        perimeterPointCount = _perimeterPointCount;
+        perimeterPos = _perimeterPos;
+    }
+}
+
+public class RoundParticle : Particle
+{
+    public float radius;
     public RoundParticle(float _density,float _radius,float[] _initPos, float _initOmega = 0f)
     {
         density = _density;
@@ -126,19 +178,7 @@ public class RoundParticle
         } 
     }
 
-    public void PlotParticlePerimeter(ref Color[] pixels, int dim_x, Color? color = null)
-    {
-        color ??= Color.white;
-        for(int i = 0; i < perimeterPointCount ; i++) 
-        {
-            if(
-                (int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x < pixels.Length
-                &&  
-                (int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x >= 0
-            )
-            pixels[(int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x] = (Color)color;
-        }
-    }
+    
     public void PlotParticleFill(ref Color[] pixels, int dim_x, Color? color = null)
     {
         color ??= Color.white;
@@ -177,29 +217,6 @@ public class RoundParticle
             prevVel1[i] = vel[i];
         }
     }
-    public void UpdatePosVel(float[]? gravity = null)
-    {
-        gravity ??= new float[2]{0f,0f};
-        for (int i = 0; i < 2; i++)
-        {
-            vel[i] = (1f + 1f/density) * prevVel1[i]
-                                    - 1f/density * prevVel2[i]
-                                    + (forceFromFluid[i] + forceFromCollisions[i])/mass
-                                    + (1f - 1f/density) * (float)gravity[i];
-            pos[i] += (vel[i] + prevVel1[i])/2f;
-            prevVel2[i] = prevVel1[i];
-            prevVel1[i] = vel[i];
-        }
-    }
-    public void UpdateOmegaTheta()
-    {
-        omega = (1f + 1f/density) * prevOmega1 
-                                - 1f/density * prevOmega2
-                                + torque/momentOfInertia;
-        theta += (omega - prevOmega1)/2f;
-        prevOmega2 = prevOmega1;
-        prevOmega1 = omega;
-    }
 
     public void UpdatePerimeterPeriodicX(int DIM_X)
     {
@@ -229,6 +246,4 @@ public class RoundParticle
     {
         return Mathf.Sqrt( (pos[0]-particle.pos[0])*(pos[0]-particle.pos[0]) + (pos[1]-particle.pos[1])*(pos[1]-particle.pos[1]) );
     }
-
-
 }

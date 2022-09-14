@@ -60,6 +60,11 @@ public class LBMNatConvWithParticles : MonoBehaviour
     RoundParticle[] roundParticles;
     
     public InitialTemperatureDistribution initTemp = InitialTemperatureDistribution.XGradient;
+
+    public GameObject particlePrefab;
+    public Transform particleParent;
+    Vector2 plotSizeDelta; 
+    float plotScale; 
     // Start is called before the first frame update
     void Start()
     {
@@ -100,10 +105,17 @@ public class LBMNatConvWithParticles : MonoBehaviour
         gravity[1] = -rbetag/beta;
         print(gravity[1]);
         roundParticles = new RoundParticle[particleCount];
+        float scale = (2f*particleRadius*plotImage.transform.GetComponent<RectTransform>().sizeDelta.x * plotImage.transform.localScale.x)/(DIM_X*particlePrefab.GetComponent<RectTransform>().sizeDelta.x);
+        plotSizeDelta = plotImage.transform.GetComponent<RectTransform>().sizeDelta;
+        plotScale = plotImage.transform.localScale.x;
         for (int i = 0; i < particleCount; i++)
         {
-            roundParticles[i] = new RoundParticle(particleDensity,particleRadius,
-            new float[2]{UnityEngine.Random.Range(particleRadius,DIM_X-particleRadius),UnityEngine.Random.Range(particleRadius,DIM_Y-particleRadius)});
+            float[] spawnPos =  new float[2]{UnityEngine.Random.Range(particleRadius,DIM_X-particleRadius),UnityEngine.Random.Range(particleRadius,DIM_Y-particleRadius)};
+            roundParticles[i] = new RoundParticle(particleDensity,particleRadius,spawnPos);
+            roundParticles[i].obj = Instantiate(particlePrefab,particleParent);
+            roundParticles[i].obj.GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
+                                                                                + new Vector2((spawnPos[0]*plotSizeDelta.x)/DIM_X,(spawnPos[1]*plotSizeDelta.y)/DIM_Y))*plotScale;
+            roundParticles[i].obj.transform.localScale = new Vector3(scale,scale,1);
         }
         maxTemp = 0f;
         minTemp = Mathf.Infinity;
@@ -179,7 +191,10 @@ public class LBMNatConvWithParticles : MonoBehaviour
         }
         for (int i = 0; i < particleCount; i++)
         {
-            roundParticles[i].PlotParticleFill(ref plotPixels,DIM_X);
+            // roundParticles[i].PlotParticleFill(ref plotPixels,DIM_X);
+            roundParticles[i].obj.GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
+                                                                                + new Vector2((roundParticles[i].pos[0]*plotSizeDelta.x)/DIM_X,(roundParticles[i].pos[1]*plotSizeDelta.y)/DIM_Y))*plotScale;
+            roundParticles[i].obj.transform.rotation = Quaternion.Euler(0,0,roundParticles[i].theta);
         }
         plotTexture.SetPixels(plotPixels);
         plotTexture.Apply();

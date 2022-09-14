@@ -288,6 +288,9 @@
     <Reference Include="log4netPlastic">
         <HintPath>C:\lbm_2d\Library\PackageCache\com.unity.collab-proxy@1.15.13\Lib\Editor\PlasticSCM\log4netPlastic.dll</HintPath>
     </Reference>
+    <Reference Include="DelaunatorSharp">
+        <HintPath>C:\lbm_2d\Library\PackageCache\com.nol1fe.delaunator@35c97bfdd2\Runtime\DelaunatorSharp.dll</HintPath>
+    </Reference>
     <Reference Include="nunit.framework">
         <HintPath>C:\lbm_2d\Library\PackageCache\com.unity.ext.nunit@1.0.6\net35\unity-custom\nunit.framework.dll</HintPath>
     </Reference>
