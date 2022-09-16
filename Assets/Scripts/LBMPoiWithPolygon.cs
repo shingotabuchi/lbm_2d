@@ -62,6 +62,8 @@ public class LBMPoiWithPolygon : MonoBehaviour
     public Slider[] SinSliders;
     public Transform canvas;
     PolygonParticle polygonParticle;
+
+    List<Vector3> dotPositions = new List<Vector3>();
     // Start is called before the first frame update
     void Start()
     {
@@ -113,7 +115,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
             }
         }
 
-        roundParticle = new RoundParticle(particleDensity,particleRadius,particleInitPos);
+        // roundParticle = new RoundParticle(particleDensity,particleRadius,particleInitPos);
         DrawLine(true);
     }
 
@@ -125,7 +127,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
         Streaming();
         BounceBackBoundaries();
         UpdateSpeedAndDensity();
-        // ImmersedBoundary();
+        ImmersedBoundary();
     }
 
     // Update is called once per frame
@@ -171,7 +173,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
             }
         }
         // roundParticle.PlotParticlePerimeter(ref plotPixels,DIM_X);
-        polygonParticle.PlotParticlePerimeter(ref plotPixels,DIM_X);
+        polygonParticle.PlotParticlePerimeter(ref plotPixels,DIM_X,new Color(0,0,0,1));
         plotTexture.SetPixels(plotPixels);
         plotTexture.Apply();
         vectorField.UpdateVectors(u,v,DIM_Y,maxSpeed,vectorFieldOn);
@@ -336,128 +338,106 @@ public class LBMPoiWithPolygon : MonoBehaviour
     }
     void ImmersedBoundary()
     {
-        for(int n = 0; n < 1; n++) 
-        { 
-            roundParticle.forceFromCollisions[0] = 0f;
-            roundParticle.forceFromCollisions[1] = 0f;
-            tmp1 = Mathf.Abs(roundParticle.pos[1] + roundParticle.radius); 
-            if(tmp1 < 2.0f*roundParticle.radius + zeta){
-                roundParticle.forceFromCollisions[1] = (roundParticle.pos[1] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
-            }
-            tmp1 = Mathf.Abs(DIM_Y-roundParticle.pos[1] + roundParticle.radius); 
-            if(tmp1 < 2.0f*roundParticle.radius + zeta){
-                roundParticle.forceFromCollisions[1] = -(DIM_Y-roundParticle.pos[1] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
-            }
-            // tmp1 = Mathf.Abs(roundParticle.pos[0] + roundParticle.radius); 
-            // if(tmp1 < 2.0f*roundParticle.radius + zeta){
-            //     roundParticle.forceFromCollisions[0] = (roundParticle.pos[0] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
-            // }
-            // tmp1 = Mathf.Abs(DIM_X-1-roundParticle.pos[0] + roundParticle.radius); 
-            // if(tmp1 < 2.0f*roundParticle.radius + zeta){
-            //     roundParticle.forceFromCollisions[0] = -(DIM_X-1-roundParticle.pos[0] + roundParticle.radius)*(2.0f*roundParticle.radius - tmp1 + zeta)*(2.0f*roundParticle.radius - tmp1 + zeta)/epsw;
-            // }
-
-            roundParticle.forceFromFluid[0] = 0f;
-            roundParticle.forceFromFluid[1] = 0f;
-            roundParticle.torque = 0f;
-            // 固体表面の流体の速度を計算
-            for(int m = 0; m < roundParticle.perimeterPointCount ; m++) 
+        // polygonParticle.forceFromFluid[0] = 0f;
+        // polygonParticle.forceFromFluid[1] = 0f;
+        // polygonParticle.torque = 0f;
+        // 固体表面の流体の速度を計算
+        for(int m = 0; m < polygonParticle.perimeterPointCount ; m++) 
+        {
+            // uet[n,m] = 0.0f; vet[n,m] = 0.0f;
+            polygonParticle.perimeterFluidVel[m,0] = 0f;
+            polygonParticle.perimeterFluidVel[m,1] = 0f;
+            for(int i = (int)polygonParticle.perimeterPos[m,0] - 3; i < (int)polygonParticle.perimeterPos[m,0] + 3; i++)
             {
-                // uet[n,m] = 0.0f; vet[n,m] = 0.0f;
-                roundParticle.perimeterFluidVel[m,0] = 0f;
-                roundParticle.perimeterFluidVel[m,1] = 0f;
-                for(int i = (int)roundParticle.perimeterPos[m,0] - 3; i < (int)roundParticle.perimeterPos[m,0] + 3; i++)
+                for(int j = (int)polygonParticle.perimeterPos[m,1] - 3; j < (int)polygonParticle.perimeterPos[m,1] + 3; j++)
                 {
-                    for(int j = (int)roundParticle.perimeterPos[m,1] - 3; j < (int)roundParticle.perimeterPos[m,1] + 3; j++)
+                    tmp1 = Mathf.Abs(polygonParticle.perimeterPos[m,0] - (float)i);
+                    tmp2 = Mathf.Abs(polygonParticle.perimeterPos[m,1] - (float)j);
+                    if(tmp1 <= 2.0f)
                     {
-                        tmp1 = Mathf.Abs(roundParticle.perimeterPos[m,0] - (float)i);
-                        tmp2 = Mathf.Abs(roundParticle.perimeterPos[m,1] - (float)j);
-                        if(tmp1 <= 2.0f)
-                        {
-                            tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
-                        } 
-                        else 
-                        {
-                            tmp3 = 0.0f;
-                        }
-                        if(tmp2 <= 2.0f)
-                        {
-                            tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp2/2.0f))/4.0f*tmp3;
-                        } 
-                        else 
-                        {
-                            tmp3 = 0.0f;
-                        }
-                        if((j<DIM_Y&&j>=0))
-                        {
-                            roundParticle.perimeterFluidVel[m,0] += u[(i + DIM_X)%DIM_X,j]*tmp3;
-                            roundParticle.perimeterFluidVel[m,1] += v[(i + DIM_X)%DIM_X,j]*tmp3;
-                        }
+                        tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
                     } 
-                }
-                roundParticle.forceOnPerimeter[m,0] = roundParticle.perimeterVel[m,0] - roundParticle.perimeterFluidVel[m,0];
-                roundParticle.forceOnPerimeter[m,1] = roundParticle.perimeterVel[m,1] - roundParticle.perimeterFluidVel[m,1];
+                    else 
+                    {
+                        tmp3 = 0.0f;
+                    }
+                    if(tmp2 <= 2.0f)
+                    {
+                        tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp2/2.0f))/4.0f*tmp3;
+                    } 
+                    else 
+                    {
+                        tmp3 = 0.0f;
+                    }
+                    if((j<DIM_Y&&j>=0))
+                    {
+                        polygonParticle.perimeterFluidVel[m,0] += u[(i + DIM_X)%DIM_X,j]*tmp3;
+                        polygonParticle.perimeterFluidVel[m,1] += v[(i + DIM_X)%DIM_X,j]*tmp3;
+                    }
+                } 
+            }
+            polygonParticle.forceOnPerimeter[m,0] = polygonParticle.perimeterVel[m,0] - polygonParticle.perimeterFluidVel[m,0];
+            polygonParticle.forceOnPerimeter[m,1] = polygonParticle.perimeterVel[m,1] - polygonParticle.perimeterFluidVel[m,1];
 
-                // 固体が外部に与える力を計算
-                for(int i = (int)roundParticle.perimeterPos[m,0] - 3; i < (int)roundParticle.perimeterPos[m,0] + 3; i++)
+            // 固体が外部に与える力を計算
+            for(int i = (int)polygonParticle.perimeterPos[m,0] - 3; i < (int)polygonParticle.perimeterPos[m,0] + 3; i++)
+            {
+                for(int j = (int)polygonParticle.perimeterPos[m,1] - 3; j < (int)polygonParticle.perimeterPos[m,1] + 3; j++)
                 {
-                    for(int j = (int)roundParticle.perimeterPos[m,1] - 3; j < (int)roundParticle.perimeterPos[m,1] + 3; j++)
+                    tmp1 = Mathf.Abs(polygonParticle.perimeterPos[m,0] - (float)i);
+                    tmp2 = Mathf.Abs(polygonParticle.perimeterPos[m,1] - (float)j);
+                    if(tmp1 <= 2.0f)
                     {
-                        tmp1 = Mathf.Abs(roundParticle.perimeterPos[m,0] - (float)i);
-                        tmp2 = Mathf.Abs(roundParticle.perimeterPos[m,1] - (float)j);
-                        if(tmp1 <= 2.0f)
-                        {
-                            tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
-                        } 
-                        else 
-                        {
-                            tmp3 = 0.0f;
-                        }
-                        if(tmp2 <= 2.0f)
-                        {
-                            tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp2/2.0f))/4.0f*tmp3;
-                        } 
-                        else 
-                        {
-                            tmp3 = 0.0f;
-                        }
-                        if((j<DIM_Y&&j>=0))
-                        {
-                            forceFromParticleX[(i + DIM_X)%DIM_X,j] += roundParticle.forceOnPerimeter[m,0] * tmp3 * 2.0f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;
-                            forceFromParticleY[(i + DIM_X)%DIM_X,j] += roundParticle.forceOnPerimeter[m,1] * tmp3 * 2.0f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;
-                        }
+                        tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp1/2.0f))/4.0f;
                     } 
-                }
-                roundParticle.forceFromFluid[0] += roundParticle.forceOnPerimeter[m,0];
-                roundParticle.forceFromFluid[1] += roundParticle.forceOnPerimeter[m,1];
-                roundParticle.torque += roundParticle.forceOnPerimeter[m,1] * (roundParticle.perimeterPos[m,0] - roundParticle.pos[0]) 
-                                        - roundParticle.forceOnPerimeter[m,0] * (roundParticle.perimeterPos[m,1] - roundParticle.pos[1]);
-            } 
+                    else 
+                    {
+                        tmp3 = 0.0f;
+                    }
+                    if(tmp2 <= 2.0f)
+                    {
+                        tmp3 = (1.0f + Mathf.Cos(Mathf.PI*tmp2/2.0f))/4.0f*tmp3;
+                    } 
+                    else 
+                    {
+                        tmp3 = 0.0f;
+                    }
+                    if((j<DIM_Y&&j>=0))
+                    {
+                        forceFromParticleX[(i + DIM_X)%DIM_X,j] += polygonParticle.forceOnPerimeter[m,0] * tmp3 * 0.5f;
+                        forceFromParticleY[(i + DIM_X)%DIM_X,j] += polygonParticle.forceOnPerimeter[m,1] * tmp3 * 0.5f;
+                    }
+                } 
+            }
+            // polygonParticle.forceFromFluid[0] += polygonParticle.forceOnPerimeter[m,0];
+            // polygonParticle.forceFromFluid[1] += polygonParticle.forceOnPerimeter[m,1];
+            // polygonParticle.torque += polygonParticle.forceOnPerimeter[m,1] * (polygonParticle.perimeterPos[m,0] - polygonParticle.pos[0]) 
+            //                         - polygonParticle.forceOnPerimeter[m,0] * (polygonParticle.perimeterPos[m,1] - polygonParticle.pos[1]);
+        } 
 
-            roundParticle.forceFromFluid[0] *= -2f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;  
-            roundParticle.forceFromFluid[1] *= -2f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;  
-            roundParticle.torque *= -2f*Mathf.PI*roundParticle.radius/(float)roundParticle.perimeterPointCount;  
+        // polygonParticle.forceFromFluid[0] *= -0.5f;  
+        // polygonParticle.forceFromFluid[1] *= -0.5f; 
+        // polygonParticle.torque *= -0.5f; 
 
-            // roundParticle.UpdatePosVelPeriodicX(DIM_X);
-            // for (int i = 0; i < 2; i++)
-            // {
-            //     roundParticle.vel[i] = (1f + 1f/roundParticle.density) * roundParticle.prevVel1[i]
-            //                             - 1f/roundParticle.density * roundParticle.prevVel2[i]
-            //                             + (roundParticle.forceFromFluid[i] + roundParticle.forceFromCollisions[i])/roundParticle.mass;
-            //                             // + (1f - 1f/roundParticle.density) * gravity[i];
-            //     roundParticle.pos[i] += (roundParticle.vel[i] + roundParticle.prevVel1[i])/2f;
-            //     roundParticle.prevVel2[i] = roundParticle.prevVel1[i];
-            //     roundParticle.prevVel1[i] = roundParticle.vel[i];
-            // }
-            // roundParticle.omega = (1f + 1f/roundParticle.density) * roundParticle.prevOmega1 
-            //                     - 1f/roundParticle.density * roundParticle.prevOmega2
-            //                     + roundParticle.torque/roundParticle.momentOfInertia;
-            // roundParticle.theta += (roundParticle.omega - roundParticle.prevOmega1)/2f;
+        // roundParticle.UpdatePosVelPeriodicX(DIM_X);
+        // for (int i = 0; i < 2; i++)
+        // {
+        //     roundParticle.vel[i] = (1f + 1f/roundParticle.density) * roundParticle.prevVel1[i]
+        //                             - 1f/roundParticle.density * roundParticle.prevVel2[i]
+        //                             + (roundParticle.forceFromFluid[i] + roundParticle.forceFromCollisions[i])/roundParticle.mass;
+        //                             // + (1f - 1f/roundParticle.density) * gravity[i];
+        //     roundParticle.pos[i] += (roundParticle.vel[i] + roundParticle.prevVel1[i])/2f;
+        //     roundParticle.prevVel2[i] = roundParticle.prevVel1[i];
+        //     roundParticle.prevVel1[i] = roundParticle.vel[i];
+        // }
+        // roundParticle.omega = (1f + 1f/roundParticle.density) * roundParticle.prevOmega1 
+        //                     - 1f/roundParticle.density * roundParticle.prevOmega2
+        //                     + roundParticle.torque/roundParticle.momentOfInertia;
+        // roundParticle.theta += (roundParticle.omega - roundParticle.prevOmega1)/2f;
 
-            // roundParticle.prevOmega2 = roundParticle.prevOmega1;
-            // roundParticle.prevOmega1 = roundParticle.omega;
-            // roundParticle.UpdatePerimeterPeriodicX(DIM_X);
-        }
+        // roundParticle.prevOmega2 = roundParticle.prevOmega1;
+        // roundParticle.prevOmega1 = roundParticle.omega;
+        // roundParticle.UpdatePerimeterPeriodicX(DIM_X);
     }
 
     void DrawLine(bool initParticle = false)
@@ -498,7 +478,9 @@ public class LBMPoiWithPolygon : MonoBehaviour
         realArea *= (lineRes * Mathf.Sin(TAU/lineRes))/2f;
 
         float perimeterLength = 2f * Mathf.PI * modeCoeffs[0] * scale;
-        float segmentLength = perimeterLength/dotCount;
+        // float segmentLength = perimeterLength/dotCount;
+        float segmentLength = 1f/(2f* (DIM_X/((canvas.localScale.x)*(plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x))));
+        dotCount = (int)(perimeterLength/segmentLength);
         float theta = 0f;
         float dtheta,r;
         int spawnedDots = 0;
@@ -518,42 +500,50 @@ public class LBMPoiWithPolygon : MonoBehaviour
             }
             spawnPos = new Vector3(Mathf.Cos(theta), Mathf.Sin(theta),0);
             spawnPos *= r;
-            if(dots.Count < spawnedDots + 1)
+
+
+            // if(dots.Count < spawnedDots + 1)
+            if(dotPositions.Count < spawnedDots + 1)
             {
-                dots.Add(
-                    Instantiate(dotPrefab,spawnPos,Quaternion.identity,dotParent)
-                );
+                dotPositions.Add(spawnPos);
+                // dots.Add(
+                //     Instantiate(dotPrefab,spawnPos,Quaternion.identity,dotParent)
+                // );
             }
             else
             {
-                dots[spawnedDots].transform.position = spawnPos;
+                // dots[spawnedDots].transform.position = spawnPos;
+                dotPositions[spawnedDots] = spawnPos;
             }
             spawnedDots++;
 
             dtheta = segmentLength/r;
             theta += dtheta;
         }
-        if(spawnedDots<dots.Count)
+        // if(spawnedDots<dots.Count)
+        if(spawnedDots<dotPositions.Count)
         {
-            for (int i = 0; i < dots.Count - spawnedDots; i++)
+            for (int i = 0; i < dotPositions.Count - spawnedDots; i++)
             {
-                Destroy(dots[dots.Count-1]);
-                dots.RemoveAt(dots.Count-1);
+                // Destroy(dots[dots.Count-1]);
+                // dots.RemoveAt(dots.Count-1);
+                dotPositions.RemoveAt(dotPositions.Count-1);
             }
         }
-        int pointCount = dots.Count;
-        float[,] perimeterPos = new float[pointCount,2];
-        for (int i = 0; i < pointCount; i++)
-        {
-            perimeterPos[i,0] = dots[i].transform.position.x/canvas.localScale.x + plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x/2f;
-            perimeterPos[i,1] = dots[i].transform.position.y/canvas.localScale.y + plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y/2f;
-            perimeterPos[i,0] *= DIM_X/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x);
-            perimeterPos[i,1] *= DIM_Y/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y);
+        // int pointCount = dots.Count;
+        if(initParticle){
+            polygonParticle = new PolygonParticle(spawnedDots);
         }
-        if(initParticle)polygonParticle = new PolygonParticle(pointCount,perimeterPos);
-        else {
-            polygonParticle.perimeterPointCount = pointCount;
-            polygonParticle.perimeterPos = perimeterPos;
+        polygonParticle.perimeterPointCount =  dotPositions.Count;
+        polygonParticle.perimeterPos = new float[polygonParticle.perimeterPointCount,2];
+        for (int i = 0; i < polygonParticle.perimeterPointCount; i++)
+        {
+            // perimeterPos[i,0] = dots[i].transform.position.x/canvas.localScale.x + plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x/2f;
+            // perimeterPos[i,1] = dots[i].transform.position.y/canvas.localScale.y + plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y/2f;
+            polygonParticle.perimeterPos[i,0] = dotPositions[i].x/canvas.localScale.x + plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x/2f;
+            polygonParticle.perimeterPos[i,1] = dotPositions[i].y/canvas.localScale.y + plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y/2f;
+            polygonParticle.perimeterPos[i,0] *= DIM_X/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x);
+            polygonParticle.perimeterPos[i,1] *= DIM_Y/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y);
         }
         points.Add(points[0]);
         line.positionCount = points.Count;

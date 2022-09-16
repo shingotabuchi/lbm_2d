@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LBMNatConvWithParticles : MonoBehaviour
+public class LBMNatConvThermoPhoresis : MonoBehaviour
 {
     public Image plotImage;
     Texture2D plotTexture;
@@ -11,7 +11,7 @@ public class LBMNatConvWithParticles : MonoBehaviour
     ColorHeatMap colorHeatMap = new ColorHeatMap();
     public VectorField vectorField;
     public HeatMapMode mode = HeatMapMode.Speed;
-    public BoundaryType[] wallboundaries = new BoundaryType[]{BoundaryType.Bounceback,BoundaryType.Bounceback,BoundaryType.Bounceback,BoundaryType.Bounceback};
+    public BoundaryType[] wallboundaries = new BoundaryType[]{BoundaryType.Adiabatic,BoundaryType.Adiabatic,BoundaryType.Adiabatic,BoundaryType.Adiabatic};
     [Range(0.0f, 1.0f)]
     public float wallTemp1 = 1f;
     [Range(0.0f, 1.0f)]
@@ -57,7 +57,6 @@ public class LBMNatConvWithParticles : MonoBehaviour
     public float epsw = 1f;
     public float beta = 1f;
     float[] gravity = new float[2];
-
     RoundParticle[] roundParticles;
     
     public InitialTemperatureDistribution initTemp = InitialTemperatureDistribution.XGradient;
@@ -66,6 +65,10 @@ public class LBMNatConvWithParticles : MonoBehaviour
     public Transform particleParent;
     Vector2 plotSizeDelta; 
     float plotScale; 
+    [Range(0.0f, 1.0f)]
+    public float particleTemp = 1f;
+    [Range(0.0f, 1.0f)]
+    public float particleLowerTemp = 0f;
     // Start is called before the first frame update
     void Start()
     {
@@ -104,6 +107,7 @@ public class LBMNatConvWithParticles : MonoBehaviour
         InitMatrices();
         gravity[0] = 0f;
         gravity[1] = -rbetag/beta;
+        // gravity[1] = 0f;
         print(gravity[1]);
         roundParticles = new RoundParticle[particleCount];
         float scale = (2f*particleRadius*plotImage.transform.GetComponent<RectTransform>().sizeDelta.x * plotImage.transform.localScale.x)/(DIM_X*particlePrefab.GetComponent<RectTransform>().sizeDelta.x);
@@ -447,7 +451,8 @@ public class LBMNatConvWithParticles : MonoBehaviour
     {
         maxSpeed = 0f;
         minSpeed = Mathf.Infinity;
-        maxTemp = 0f;
+        maxTemp = particleTemp;
+        // minTemp = particleLowerTemp;
         minTemp = Mathf.Infinity;
         maxRho = 0f;
         minRho = Mathf.Infinity;
@@ -511,7 +516,8 @@ public class LBMNatConvWithParticles : MonoBehaviour
                 for (int i = 0; i < 2; i++)
                 {
                     tmp1 = roundParticles[n].ParticleDistance(roundParticles[k]);
-                    if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
+                    if(tmp1 < 2.0f*roundParticles[n].radius + zeta)
+                    {
                         roundParticles[n].forceFromCollisions[i] += (roundParticles[n].pos[i] - roundParticles[k].pos[i])*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
                     }
                 }
@@ -524,11 +530,12 @@ public class LBMNatConvWithParticles : MonoBehaviour
             {
                 roundParticles[n].perimeterFluidVel[m,0] = 0f;
                 roundParticles[n].perimeterFluidVel[m,1] = 0f;
-                float angle = Vector2.SignedAngle(
+                float angle = Vector2.Angle(
                     new Vector2(roundParticles[n].perimeterPos[m,0] - roundParticles[n].pos[0],roundParticles[n].perimeterPos[m,1] - roundParticles[n].pos[1]),
                     new Vector2(-Mathf.Sin(roundParticles[n].theta),Mathf.Cos(roundParticles[n].theta))
                 );
-                // if(angle>90f)  temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = 1f;
+                if(angle>90f) temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleTemp;
+                // else temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleLowerTemp;
                 // temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = 1f;
                 // 固体表面の速度を計算
                 for(int i = (int)roundParticles[n].perimeterPos[m,0] - 3; i < (int)roundParticles[n].perimeterPos[m,0] + 3; i++)

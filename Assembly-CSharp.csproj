@@ -62,13 +62,15 @@
      <Compile Include="Assets\Scripts\LBMPoiWithParticle.cs" />
      <Compile Include="Assets\Scripts\LBMNatConv1DArray.cs" />
      <Compile Include="Assets\Scripts\LBMNatConvMDArray.cs" />
+     <Compile Include="Assets\Scripts\LBMPoiWithPolygon.cs" />
      <Compile Include="Assets\Scripts\LBMNatConv.cs" />
      <Compile Include="Assets\Scripts\LBMTherm.cs" />
      <Compile Include="Assets\Triangulation\Triangulation2D.cs" />
      <Compile Include="Assets\Scripts\IBLBMDKT.cs" />
      <Compile Include="Assets\Triangulation\HalfEdge2D.cs" />
      <Compile Include="Assets\Scripts\D2Q4AdvectionMain.cs" />
-     <Compile Include="Assets\Scripts\LBMPoiWithPolygon.cs" />
+     <Compile Include="Assets\Scripts\LBMNatConvThermoPhoresis.cs" />
+     <Compile Include="Assets\Scripts\LBMVicsek.cs" />
      <None Include="Assets\ComputeShaders\D2Q4Test.compute" />
      <None Include="Assets\Scripts\data.txt" />
      <None Include="Assets\ComputeShaders\LBMNatConv.compute" />

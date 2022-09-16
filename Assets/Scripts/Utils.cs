@@ -132,17 +132,38 @@ public class Particle
 
 public class PolygonParticle : Particle
 {
+    public PolygonParticle(int _perimeterPointCount)
+    {
+        perimeterPointCount = _perimeterPointCount;
+        perimeterPos = new float[_perimeterPointCount,2];
+        perimeterVel = new float[_perimeterPointCount,2];
+        perimeterFluidVel = new float[_perimeterPointCount,2];
+        forceOnPerimeter = new float[_perimeterPointCount,2];
+        for (int i = 0; i < _perimeterPointCount; i++)
+        {
+            for (int j = 0; j < 2; j++)
+            {
+                perimeterVel[i,j] = 0f;
+                perimeterFluidVel[i,j] = 0f;
+                forceOnPerimeter[i,j] = 0f;
+            }
+        }
+    }
     public PolygonParticle(int _perimeterPointCount, float[,] _perimeterPos)
     {
         perimeterPointCount = _perimeterPointCount;
         perimeterPos = _perimeterPos;
+    }
+    public PolygonParticle()
+    {
     }
 }
 
 public class RoundParticle : Particle
 {
     public float radius;
-    public RoundParticle(float _density,float _radius,float[] _initPos, float _initOmega = 0f)
+    public int bottomPointIndex = 0;
+    public RoundParticle(float _density,float _radius,float[] _initPos, float _initTheta = 0f)
     {
         density = _density;
         radius = _radius;
@@ -153,8 +174,8 @@ public class RoundParticle : Particle
         vel = new float[2]{0f,0f};
         prevVel1 = new float[2]{0f,0f};
         prevVel2 = new float[2]{0f,0f};
-        omega = _initOmega;
-        theta = 0f;
+        omega = 0f;
+        theta = _initTheta;
         prevOmega1 = 0f;
         prevOmega2 = 0f;
         perimeterPointCount = (int)(2.0f * Mathf.PI * radius * 2.0f);
@@ -165,10 +186,13 @@ public class RoundParticle : Particle
         forceFromCollisions = new float[2]{0f,0f};
         forceFromFluid = new float[2]{0f,0f};
         torque = 0f;
+
         for(int i = 0; i < perimeterPointCount; i++) 
         {
-            perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
-            perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
+            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount;
+
+            perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(angle);
+            perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(angle);
             perimeterVel[i,0] = vel[0] - omega*(perimeterPos[i,1] - pos[1]);
             perimeterVel[i,1] = vel[1] + omega*(perimeterPos[i,0] - pos[0]);
             forceOnPerimeter[i,0] = 0f;
@@ -235,8 +259,9 @@ public class RoundParticle : Particle
     {
         for(int i = 0; i < perimeterPointCount; i++) 
         {
-            perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
-            perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(2.0f*Mathf.PI*(float)i/(float)perimeterPointCount);
+            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount;
+            perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(angle);
+            perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(angle);
             perimeterVel[i,0] = vel[0] - omega*(perimeterPos[i,1] - pos[1]);
             perimeterVel[i,1] = vel[1] + omega*(perimeterPos[i,0] - pos[0]);
         } 
@@ -245,5 +270,14 @@ public class RoundParticle : Particle
     public float ParticleDistance(RoundParticle particle)
     {
         return Mathf.Sqrt( (pos[0]-particle.pos[0])*(pos[0]-particle.pos[0]) + (pos[1]-particle.pos[1])*(pos[1]-particle.pos[1]) );
+    }
+
+    public bool PointIsInParticle(int[] point)
+    {
+        if(
+            (point[0] - pos[0])*(point[0] - pos[0]) + (point[1] - pos[1])*(point[1] - pos[1])
+            < radius*radius
+        )return true;
+        return false;
     }
 }
