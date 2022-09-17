@@ -548,14 +548,14 @@ MonoBehaviour:
   loopCount: 1
   particlePrefab: {fileID: 5967441514033678248, guid: 85aac0deefb57984d829fb175e5e2fd3, type: 3}
   particleParent: {fileID: 232056657}
-  particleCount: 25
+  particleCount: 50
   particleDensity: 1.25
-  particleRadius: 1.25
+  particleRadius: 2.25
   zeta: 0.1
   epsw: 10
-  DIM_X: 32
-  DIM_Y: 32
-  particlePropulsion: 0.005
+  DIM_X: 64
+  DIM_Y: 64
+  particlePropulsion: 0.05
   particleViewRange: 3
   particleFov: 210
   noiseAngleDeg: 0

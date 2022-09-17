@@ -168,21 +168,21 @@ public class LBMVicsek : MonoBehaviour
                     f[k,i,j] += -(f[k,i,j] - f0[k,i,j])/tau;
                     // Force
                     f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*forceFromParticlesX[i,j] + cy[k]*forceFromParticlesY[i,j]);
-                    // f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*0.0001f + cy[k]*forceFromParticlesY[i,j]);
-                    for (int n = 0; n < particleCount; n++)
-                    {
-                        if(roundParticles[n].PointIsInParticle(new int[2]{i,j}))
-                        {
-                            Vector2 force = new Vector2(-Mathf.Sin(roundParticles[n].theta),Mathf.Cos(roundParticles[n].theta));
-                            force *= particlePropulsion;
-                            f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*(force[0]) + cy[k]*(force[1]));
-                            break;
-                        }
-                    }
-                    // if(forceFromParticlesX[i,j]!=0f) print(f[k,i,j]);
-                    forceFromParticlesX[i,j] = 0f;
-                    forceFromParticlesY[i,j] = 0f;
+                    // // f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*0.0001f + cy[k]*forceFromParticlesY[i,j]);
+                    // for (int n = 0; n < particleCount; n++)
+                    // {
+                    //     if(roundParticles[n].PointIsInParticle(new int[2]{i,j}))
+                    //     {
+                    //         Vector2 force = new Vector2(-Mathf.Sin(roundParticles[n].theta),Mathf.Cos(roundParticles[n].theta));
+                    //         force *= particlePropulsion;
+                    //         f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*(force[0]) + cy[k]*(force[1]));
+                    //         break;
+                    //     }
+                    // }
+                    // // if(forceFromParticlesX[i,j]!=0f) print(f[k,i,j]);
                 } 
+                forceFromParticlesX[i,j] = 0f;
+                forceFromParticlesY[i,j] = 0f;
             }   
         }
     }
@@ -432,16 +432,16 @@ public class LBMVicsek : MonoBehaviour
                 roundParticles[n].forceOnPerimeter[m,0] = roundParticles[n].perimeterVel[m,0] - roundParticles[n].perimeterFluidVel[m,0];
                 roundParticles[n].forceOnPerimeter[m,1] = roundParticles[n].perimeterVel[m,1] - roundParticles[n].perimeterFluidVel[m,1];
 
-                // if(m == roundParticles[n].bottomPointIndex)
-                // {
-                //     Vector2 vect2Center = new Vector2(
-                //         roundParticles[n].pos[0] - roundParticles[n].perimeterPos[0,0],
-                //         roundParticles[n].pos[1] - roundParticles[n].perimeterPos[0,1]
-                //     );
-                //     vect2Center.Normalize();
-                //     roundParticles[n].forceOnPerimeter[m,0] -= particlePropulsion * vect2Center[0];
-                //     roundParticles[n].forceOnPerimeter[m,1] -= particlePropulsion * vect2Center[1];
-                // }
+                if(angle>90f)
+                {
+                    Vector2 vect2Center = new Vector2(
+                        roundParticles[n].pos[0] - roundParticles[n].perimeterPos[m,0],
+                        roundParticles[n].pos[1] - roundParticles[n].perimeterPos[m,1]
+                    );
+                    vect2Center.Normalize();
+                    roundParticles[n].forceOnPerimeter[m,0] += particlePropulsion * vect2Center[0] * Mathf.Cos((angle*Mathf.PI)/180f);
+                    roundParticles[n].forceOnPerimeter[m,1] += particlePropulsion * vect2Center[1] * Mathf.Cos((angle*Mathf.PI)/180f);
+                }
 
                 // 固体が外部に与える力を計算
                 for(int i = (int)roundParticles[n].perimeterPos[m,0] - 3; i < (int)roundParticles[n].perimeterPos[m,0] + 3; i++)
@@ -483,7 +483,8 @@ public class LBMVicsek : MonoBehaviour
             roundParticles[n].forceFromFluid[1] *= -2f*Mathf.PI*roundParticles[n].radius/(float)roundParticles[n].perimeterPointCount;  
             roundParticles[n].torque *= -2f*Mathf.PI*roundParticles[n].radius/(float)roundParticles[n].perimeterPointCount;  
 
-            roundParticles[n].UpdatePosVel(new float[2]{0f,gravity});
+            // roundParticles[n].UpdatePosVel(new float[2]{-Mathf.Sin(roundParticles[n].theta)*particlePropulsion,Mathf.Cos(roundParticles[n].theta)*particlePropulsion});
+            roundParticles[n].UpdatePosVel();
             roundParticles[n].UpdateOmegaTheta();
             roundParticles[n].UpdatePerimeter();
         }

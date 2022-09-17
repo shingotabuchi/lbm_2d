@@ -223,7 +223,7 @@ public class RoundParticle : Particle
 
         for(int i = 0; i < perimeterPointCount; i++) 
         {
-            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount;
+            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount + theta;
 
             perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(angle);
             perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(angle);
@@ -293,7 +293,7 @@ public class RoundParticle : Particle
     {
         for(int i = 0; i < perimeterPointCount; i++) 
         {
-            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount;
+            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount + theta;;
             perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(angle);
             perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(angle);
             perimeterVel[i,0] = vel[0] - omega*(perimeterPos[i,1] - pos[1]);
