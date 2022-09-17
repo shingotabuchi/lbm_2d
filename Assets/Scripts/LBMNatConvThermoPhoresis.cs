@@ -116,7 +116,7 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
         for (int i = 0; i < particleCount; i++)
         {
             float[] spawnPos =  new float[2]{UnityEngine.Random.Range(particleRadius,DIM_X-particleRadius),UnityEngine.Random.Range(particleRadius,DIM_Y-particleRadius)};
-            roundParticles[i] = new RoundParticle(particleDensity,particleRadius,spawnPos);
+            roundParticles[i] = new RoundParticle(particleDensity,particleRadius,spawnPos,Random.Range(0f,2f*Mathf.PI));
             roundParticles[i].obj = Instantiate(particlePrefab,particleParent);
             roundParticles[i].obj.GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
                                                                                 + new Vector2((spawnPos[0]*plotSizeDelta.x)/DIM_X,(spawnPos[1]*plotSizeDelta.y)/DIM_Y))*plotScale;
@@ -199,7 +199,7 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
             // roundParticles[i].PlotParticleFill(ref plotPixels,DIM_X);
             roundParticles[i].obj.GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
                                                                                 + new Vector2((roundParticles[i].pos[0]*plotSizeDelta.x)/DIM_X,(roundParticles[i].pos[1]*plotSizeDelta.y)/DIM_Y))*plotScale;
-            roundParticles[i].obj.transform.rotation = Quaternion.Euler(0,0,roundParticles[i].theta);
+            roundParticles[i].obj.transform.rotation = Quaternion.Euler(0,0,((roundParticles[i].theta*180f)/Mathf.PI));
         }
         plotTexture.SetPixels(plotPixels);
         plotTexture.Apply();
@@ -493,22 +493,24 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
         { 
             roundParticles[n].forceFromCollisions[0] = 0f;
             roundParticles[n].forceFromCollisions[1] = 0f;
-            tmp1 = Mathf.Abs(roundParticles[n].pos[1] + roundParticles[n].radius); 
-            if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-                roundParticles[n].forceFromCollisions[1] = (roundParticles[n].pos[1] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            }
-            tmp1 = Mathf.Abs(DIM_Y-1-roundParticles[n].pos[1] + roundParticles[n].radius); 
-            if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-                roundParticles[n].forceFromCollisions[1] = -(DIM_Y-1-roundParticles[n].pos[1] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            }
-            tmp1 = Mathf.Abs(roundParticles[n].pos[0] + roundParticles[n].radius); 
-            if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-                roundParticles[n].forceFromCollisions[0] = (roundParticles[n].pos[0] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            }
-            tmp1 = Mathf.Abs(DIM_X-1-roundParticles[n].pos[0] + roundParticles[n].radius); 
-            if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-                roundParticles[n].forceFromCollisions[0] = -(DIM_X-1-roundParticles[n].pos[0] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            }
+            // tmp1 = Mathf.Abs(roundParticles[n].pos[1] + roundParticles[n].radius); 
+            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
+            //     roundParticles[n].forceFromCollisions[1] = (roundParticles[n].pos[1] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
+            // }
+            // tmp1 = Mathf.Abs(DIM_Y-1-roundParticles[n].pos[1] + roundParticles[n].radius); 
+            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
+            //     roundParticles[n].forceFromCollisions[1] = -(DIM_Y-1-roundParticles[n].pos[1] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
+            // }
+            // tmp1 = Mathf.Abs(roundParticles[n].pos[0] + roundParticles[n].radius); 
+            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
+            //     roundParticles[n].forceFromCollisions[0] = (roundParticles[n].pos[0] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
+            // }
+            // tmp1 = Mathf.Abs(DIM_X-1-roundParticles[n].pos[0] + roundParticles[n].radius); 
+            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
+            //     roundParticles[n].forceFromCollisions[0] = -(DIM_X-1-roundParticles[n].pos[0] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
+            // }
+
+            
 
             for (int k = 0; k < particleCount; k++)
             {
@@ -523,6 +525,16 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
                 }
             }
 
+            float wallDistance;
+            wallDistance = Mathf.Abs(roundParticles[n].pos[1]);
+            if(wallDistance < roundParticles[n].radius) roundParticles[n].pos[1] = roundParticles[n].radius;
+            wallDistance = Mathf.Abs(DIM_Y-1-roundParticles[n].pos[1]);
+            if(wallDistance < roundParticles[n].radius) roundParticles[n].pos[1] = DIM_Y-1-roundParticles[n].radius;
+            wallDistance = Mathf.Abs(roundParticles[n].pos[0]);
+            if(wallDistance < roundParticles[n].radius) roundParticles[n].pos[0] =roundParticles[n].radius;
+            wallDistance = Mathf.Abs(DIM_X-1-roundParticles[n].pos[0]);
+            if(wallDistance < roundParticles[n].radius) roundParticles[n].pos[0] = DIM_X-1-roundParticles[n].radius;
+
             roundParticles[n].forceFromFluid[0] = 0f;
             roundParticles[n].forceFromFluid[1] = 0f;
             roundParticles[n].torque = 0f;
@@ -534,7 +546,13 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
                     new Vector2(roundParticles[n].perimeterPos[m,0] - roundParticles[n].pos[0],roundParticles[n].perimeterPos[m,1] - roundParticles[n].pos[1]),
                     new Vector2(-Mathf.Sin(roundParticles[n].theta),Mathf.Cos(roundParticles[n].theta))
                 );
-                if(angle>90f) temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleTemp;
+                if((int)roundParticles[n].perimeterPos[m,0] >= 0 && (int)roundParticles[n].perimeterPos[m,0] < DIM_X
+                    && (int)roundParticles[n].perimeterPos[m,1] >= 0 && (int)roundParticles[n].perimeterPos[m,1] < DIM_Y
+                )
+                {
+                    if(angle>90f)temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleTemp;
+                    // else temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleLowerTemp;
+                }
                 // else temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleLowerTemp;
                 // temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = 1f;
                 // 固体表面の速度を計算

@@ -76,12 +76,12 @@ public class Particle
     public float prevOmega1;//前フレームの角速度
     public float prevOmega2;//前々フレームの角速度
     public float torque;
-    public float[] pos;
-    public float[] vel;
-    public float[] prevVel1;//前フレームの速度
-    public float[] prevVel2;//前々フレームの速度
-    public float[] forceFromCollisions;
-    public float[] forceFromFluid;
+    public float[] pos = new float[2];
+    public float[] vel = new float[2];
+    public float[] prevVel1 = new float[2];//前フレームの速度
+    public float[] prevVel2 = new float[2];//前々フレームの速度
+    public float[] forceFromCollisions = new float[2];
+    public float[] forceFromFluid = new float[2];
     public float[,] perimeterPos;
     public float[,] perimeterVel;
     public float[,] perimeterFluidVel;
@@ -92,6 +92,19 @@ public class Particle
     public float momentOfInertia;
 
     public void PlotParticlePerimeter(ref Color[] pixels, int dim_x, Color? color = null)
+    {
+        color ??= Color.white;
+        for(int i = 0; i < perimeterPointCount ; i++) 
+        {
+            if(
+                (int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x < pixels.Length
+                &&  
+                (int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x >= 0
+            )
+            pixels[(int)perimeterPos[i,0] + (int)perimeterPos[i,1] * dim_x] = (Color)color;
+        }
+    }
+    public void PlotParticleTrace(ref Color[] pixels, int dim_x, Color? color = null)
     {
         color ??= Color.white;
         for(int i = 0; i < perimeterPointCount ; i++) 
@@ -132,13 +145,30 @@ public class Particle
 
 public class PolygonParticle : Particle
 {
-    public PolygonParticle(int _perimeterPointCount)
+    public PolygonParticle(int _perimeterPointCount,float _density = 1f, float _area = 100f,float[]? _initPos = null)
     {
         perimeterPointCount = _perimeterPointCount;
-        perimeterPos = new float[_perimeterPointCount,2];
-        perimeterVel = new float[_perimeterPointCount,2];
-        perimeterFluidVel = new float[_perimeterPointCount,2];
-        forceOnPerimeter = new float[_perimeterPointCount,2];
+        vel = new float[2]{0f,0f};
+        prevVel1 = new float[2]{0f,0f};
+        prevVel2 = new float[2]{0f,0f};
+        omega = 0f;
+        theta = 0f;
+        prevOmega1 = 0f;
+        prevOmega2 = 0f;
+        perimeterPos = new float[perimeterPointCount,2];
+        perimeterVel = new float[perimeterPointCount,2];
+        perimeterFluidVel = new float[perimeterPointCount,2];
+        forceOnPerimeter = new float[perimeterPointCount,2];
+        forceFromCollisions = new float[2]{0f,0f};
+        forceFromFluid = new float[2]{0f,0f};
+        torque = 0f;
+        volume = _area;
+        density = _density;
+        mass = volume * density;
+        // momentOfInertia = (volume*volume/Mathf.PI)* _density/2f;
+        momentOfInertia = 5100f;
+        if(_initPos==null) pos = new float[2]{0f,0f};
+        else pos = (float[])_initPos;
         for (int i = 0; i < _perimeterPointCount; i++)
         {
             for (int j = 0; j < 2; j++)
@@ -149,10 +179,14 @@ public class PolygonParticle : Particle
             }
         }
     }
-    public PolygonParticle(int _perimeterPointCount, float[,] _perimeterPos)
+    public PolygonParticle(int _perimeterPointCount, float[,] _perimeterPos, float _density, float _area)
     {
         perimeterPointCount = _perimeterPointCount;
         perimeterPos = _perimeterPos;
+        volume = _area;
+        density = _density;
+        mass = volume * density;
+        momentOfInertia = (volume*volume/Mathf.PI)* _density/2f;
     }
     public PolygonParticle()
     {

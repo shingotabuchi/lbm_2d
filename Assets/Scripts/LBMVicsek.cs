@@ -37,6 +37,9 @@ public class LBMVicsek : MonoBehaviour
     public float particleFov = 120f;
     float plotScale;
     public float noiseAngleDeg = 30f;
+    public float gravity = 0f;
+
+    public bool align;
     Vector2 plotSizeDelta;
     
     // Start is called before the first frame update
@@ -164,7 +167,7 @@ public class LBMVicsek : MonoBehaviour
                     f0[k,i,j] = w[k]*rho[i,j]*(1.0f +3.0f*tmp +9.0f/2.0f*tmp*tmp -3.0f/2.0f*u2);
                     f[k,i,j] += -(f[k,i,j] - f0[k,i,j])/tau;
                     // Force
-                    // f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*forceFromParticlesX[i,j] + cy[k]*forceFromParticlesY[i,j]);
+                    f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*forceFromParticlesX[i,j] + cy[k]*forceFromParticlesY[i,j]);
                     // f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*0.0001f + cy[k]*forceFromParticlesY[i,j]);
                     for (int n = 0; n < particleCount; n++)
                     {
@@ -172,7 +175,8 @@ public class LBMVicsek : MonoBehaviour
                         {
                             Vector2 force = new Vector2(-Mathf.Sin(roundParticles[n].theta),Mathf.Cos(roundParticles[n].theta));
                             force *= particlePropulsion;
-                            f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*force[0] + cy[k]*force[1]);
+                            f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*(force[0]) + cy[k]*(force[1]));
+                            break;
                         }
                     }
                     // if(forceFromParticlesX[i,j]!=0f) print(f[k,i,j]);
@@ -278,27 +282,45 @@ public class LBMVicsek : MonoBehaviour
             //     roundParticles[n].forceFromCollisions[0] = -(DIM_X-1-roundParticles[n].pos[0] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
             // }
 
-            Vector2 averageMuki = new Vector2(0f,0f);
-            int closeParticleCount = 0;
-            for (int k = 0; k < particleCount; k++)
-            {
-                if(k==n) continue;
-                for (int i = 0; i < 2; i++)
+            if(align){
+                Vector2 averageMuki = new Vector2(0f,0f);
+                int closeParticleCount = 0;
+                for (int k = 0; k < particleCount; k++)
                 {
-                    tmp1 = roundParticles[n].ParticleDistance(roundParticles[k]);
-                    if(tmp1 < particleViewRange)
+                    if(k==n) continue;
+                    for (int i = 0; i < 2; i++)
                     {
-                        // roundParticles[n].forceFromCollisions[i] += (roundParticles[n].pos[i] - roundParticles[k].pos[i])*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-                        averageMuki += new Vector2(Mathf.Sin(roundParticles[k].theta),Mathf.Cos(roundParticles[k].theta));
-                        closeParticleCount++;
+                        tmp1 = roundParticles[n].ParticleDistance(roundParticles[k]);
+                        if(tmp1 < particleViewRange)
+                        {
+                            roundParticles[n].forceFromCollisions[i] += (roundParticles[n].pos[i] - roundParticles[k].pos[i])*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
+                            averageMuki += new Vector2(Mathf.Sin(roundParticles[k].theta),Mathf.Cos(roundParticles[k].theta));
+                            closeParticleCount++;
+                        }
+                    }
+                }
+                if(closeParticleCount!=0)
+                {
+                    averageMuki /= closeParticleCount;
+                    roundParticles[n].theta = Mathf.Atan2(averageMuki[0],averageMuki[1]) + (Random.Range(-noiseAngleDeg,noiseAngleDeg)*Mathf.PI)/180f;
+                }
+            }
+            else
+            {
+                for (int k = 0; k < particleCount; k++)
+                {
+                    if(k==n) continue;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        tmp1 = roundParticles[n].ParticleDistance(roundParticles[k]);
+                        if(tmp1 < particleViewRange)
+                        {
+                            roundParticles[n].forceFromCollisions[i] += (roundParticles[n].pos[i] - roundParticles[k].pos[i])*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
+                        }
                     }
                 }
             }
-            if(closeParticleCount!=0)
-            {
-                averageMuki /= closeParticleCount;
-                roundParticles[n].theta = Mathf.Atan2(averageMuki[0],averageMuki[1]) + (Random.Range(-noiseAngleDeg,noiseAngleDeg)*Mathf.PI)/180f;
-            }
+            
 
             float wallDistance;
             float angle;
@@ -461,7 +483,7 @@ public class LBMVicsek : MonoBehaviour
             roundParticles[n].forceFromFluid[1] *= -2f*Mathf.PI*roundParticles[n].radius/(float)roundParticles[n].perimeterPointCount;  
             roundParticles[n].torque *= -2f*Mathf.PI*roundParticles[n].radius/(float)roundParticles[n].perimeterPointCount;  
 
-            roundParticles[n].UpdatePosVel(new float[2]{0f,0f});
+            roundParticles[n].UpdatePosVel(new float[2]{0f,gravity});
             roundParticles[n].UpdateOmegaTheta();
             roundParticles[n].UpdatePerimeter();
         }

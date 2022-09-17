@@ -3,17 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LBMPoiWithPolygon : MonoBehaviour
+public class LBMFreePolygon : MonoBehaviour
 {
     public Image plotImage;
+    public Image tracePlotImage;
     Texture2D plotTexture;
     Color[] plotPixels;
+    Texture2D tracePlotTexture;
+    Color[] tracePlotPixels;
     ColorHeatMap colorHeatMap = new ColorHeatMap();
     public bool vectorFieldOn;
     public VectorField vectorField;
     public int DIM_X = 128;
     public int DIM_Y = 128;
-    public float gx = 0.00001f;
+    public float gx = 0f;
     public float gy = 0f;
     public bool normalizeHeatMap = true;
     public HeatMapMode mode = HeatMapMode.Speed;
@@ -42,8 +45,6 @@ public class LBMPoiWithPolygon : MonoBehaviour
     public float particleRadius = 12.5f;
     public float particleDensity = 1.25f;
     public float[] particleInitPos = new float[2]{64f,64f};
-    RoundParticle roundParticle;
-    
     RectObstacle rectObs;
 
     public int lineRes = 50;
@@ -52,18 +53,21 @@ public class LBMPoiWithPolygon : MonoBehaviour
     public float[] modeSinCoeffs = new float[4];
     public float area = 1000f;
     public float realArea;
-    public GameObject dotPrefab;
-    List<GameObject> dots = new List<GameObject>();
-    // float dotDist = 0.5f;
     public int dotCount = 10;
-    public Transform dotParent;
     public LineRenderer line;
     public Slider[] CosSliders;
     public Slider[] SinSliders;
     public Transform canvas;
+    public Color perimColor;
+    public Color traceColor;
+
     PolygonParticle polygonParticle;
 
     List<Vector3> dotPositions = new List<Vector3>();
+
+    public float pTheta;
+
+    public bool falling = false;
     // Start is called before the first frame update
     void Start()
     {
@@ -71,6 +75,17 @@ public class LBMPoiWithPolygon : MonoBehaviour
         plotTexture.filterMode = FilterMode.Point;
         plotPixels = plotTexture.GetPixels();
         plotImage.sprite = Sprite.Create(plotTexture, new Rect(0,0,DIM_X,DIM_Y),Vector2.zero);
+
+        tracePlotTexture = new Texture2D(DIM_X,DIM_Y);
+        tracePlotTexture.filterMode = FilterMode.Point;
+        tracePlotPixels = tracePlotTexture.GetPixels();
+        for (int i = 0; i < tracePlotPixels.Length; i++)
+        {
+            tracePlotPixels[i] = new Color(0,0,0,0);
+        }
+        tracePlotTexture.SetPixels(tracePlotPixels);
+        tracePlotTexture.Apply();
+        tracePlotImage.sprite = Sprite.Create(tracePlotTexture, new Rect(0,0,DIM_X,DIM_Y),Vector2.zero);
 
         rectObs = new RectObstacle(obsPos,H,W,DIM_X);
 
@@ -115,7 +130,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
             }
         }
 
-        // roundParticle = new RoundParticle(particleDensity,particleRadius,particleInitPos);
+        // polygonParticle = new RoundParticle(particleDensity,particleRadius,particleInitPos);
         DrawLine(true);
     }
 
@@ -138,7 +153,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
             LBMStep();
         }
         UpdatePlot();
-        DrawLine();
+        pTheta = polygonParticle.theta;
     }
     public void OnSliderChange()
     {
@@ -173,8 +188,17 @@ public class LBMPoiWithPolygon : MonoBehaviour
                 plotPixels[i] = colorHeatMap.GetColorForValue(rho[i%DIM_X,i/DIM_X],maxRho);
             }
         }
-        // roundParticle.PlotParticlePerimeter(ref plotPixels,DIM_X);
-        polygonParticle.PlotParticlePerimeter(ref plotPixels,DIM_X,new Color(0,0,0,1));
+        for (int i = 0; i < 2; i++)
+        {
+            for (int j = 0; j < 2; j++)
+            {
+                tracePlotPixels[(int)polygonParticle.pos[0]+i + (int)(polygonParticle.pos[1]+j)*tracePlotTexture.width] = traceColor;
+            }
+        }
+        tracePlotTexture.SetPixels(tracePlotPixels);
+        tracePlotTexture.Apply();
+        // polygonParticle.PlotParticlePerimeter(ref plotPixels,DIM_X);
+        polygonParticle.PlotParticlePerimeter(ref plotPixels,DIM_X,perimColor);
         plotTexture.SetPixels(plotPixels);
         plotTexture.Apply();
         vectorField.UpdateVectors(u,v,DIM_Y,maxSpeed,vectorFieldOn);
@@ -193,7 +217,8 @@ public class LBMPoiWithPolygon : MonoBehaviour
                     f0[k,i,j] = w[k]*rho[i,j]*(1.0f +3.0f*tmp +9.0f/2.0f*tmp*tmp -3.0f/2.0f*u2);
                     f[k,i,j] += -(f[k,i,j] - f0[k,i,j])/tau;
                     // Force
-                    f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*gx + cy[k]*gy) + 3f*w[k]*(forceFromParticleX[i,j]*cx[k] + forceFromParticleY[i,j]*cy[k]);
+                    if(falling) f[k,i,j] += 3f*w[k]*(forceFromParticleX[i,j]*cx[k] + forceFromParticleY[i,j]*cy[k]);
+                    else f[k,i,j] += 3f*w[k]*rho[i,j]*(cx[k]*gx + cy[k]*gy) + 3f*w[k]*(forceFromParticleX[i,j]*cx[k] + forceFromParticleY[i,j]*cy[k]);
                 } 
                 // reset force from particle;
                 forceFromParticleX[i,j] = 0.0f;
@@ -204,6 +229,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
 
     void Streaming()
     {
+        int im,jm;
         ftmp = (float[,,])(f.Clone());
         for(int i = 0; i < DIM_X; i++)
         { 
@@ -211,10 +237,22 @@ public class LBMPoiWithPolygon : MonoBehaviour
             { 
                 for(int k = 0; k <= 8; k++)
                 {
-                    //periodic boundary condition
-                    int im = (i + (int)cx[k] + DIM_X)%DIM_X; 
-                    int jm = j + (int)cy[k];
-                    if(jm != DIM_Y && jm !=-1) f[k,im,jm] = ftmp[k,i,j];
+                    if(falling)
+                    {
+                        im = i + (int)cx[k]; 
+                        jm = j + (int)cy[k];
+                        if((jm!=DIM_Y&&jm!=-1) && (im!=DIM_X&&im!=-1))
+                        {
+                            f[k,im,jm] = ftmp[k,i,j];
+                        }
+                    }
+                    else
+                    {
+                        //periodic boundary condition
+                        im = (i + (int)cx[k] + DIM_X)%DIM_X; 
+                        jm = j + (int)cy[k];
+                        if(jm != DIM_Y && jm !=-1) f[k,im,jm] = ftmp[k,i,j];
+                    }
                 } 
             }
         }
@@ -223,6 +261,28 @@ public class LBMPoiWithPolygon : MonoBehaviour
     void BounceBackBoundaries()
     {
         // ftmp = (float[,,])(f.Clone());
+        if(falling)
+        {
+            for (int i = 0; i < DIM_X; i++)
+            {
+                f[4,i,DIM_Y-1] = f[2,i,DIM_Y-1];
+                f[7,i,DIM_Y-1] = f[5,i,DIM_Y-1];
+                f[8,i,DIM_Y-1] = f[6,i,DIM_Y-1]; 
+                f[2,i,0] = f[4,i,0]; 
+                f[5,i,0] = f[7,i,0]; 
+                f[6,i,0] = f[8,i,0]; 
+            }
+            for (int j = 0; j < DIM_Y; j++)
+            {
+                f[3,DIM_X-1,j] = f[1,DIM_X-1,j];
+                f[6,DIM_X-1,j] = f[8,DIM_X-1,j];
+                f[7,DIM_X-1,j] = f[5,DIM_X-1,j];
+                f[1,0,j] = f[3,0,j]; 
+                f[5,0,j] = f[7,0,j]; 
+                f[8,0,j] = f[6,0,j]; 
+            }
+            return;
+        }
         if(enableObs)
         {
             for (int j = rectObs.pos[1] - H/2; j <= rectObs.pos[1] + H/2; j++)
@@ -339,9 +399,9 @@ public class LBMPoiWithPolygon : MonoBehaviour
     }
     void ImmersedBoundary()
     {
-        // polygonParticle.forceFromFluid[0] = 0f;
-        // polygonParticle.forceFromFluid[1] = 0f;
-        // polygonParticle.torque = 0f;
+        polygonParticle.forceFromFluid[0] = 0f;
+        polygonParticle.forceFromFluid[1] = 0f;
+        polygonParticle.torque = 0f;
         // 固体表面の流体の速度を計算
         for(int m = 0; m < polygonParticle.perimeterPointCount ; m++) 
         {
@@ -410,45 +470,31 @@ public class LBMPoiWithPolygon : MonoBehaviour
                     }
                 } 
             }
-            // polygonParticle.forceFromFluid[0] += polygonParticle.forceOnPerimeter[m,0];
-            // polygonParticle.forceFromFluid[1] += polygonParticle.forceOnPerimeter[m,1];
-            // polygonParticle.torque += polygonParticle.forceOnPerimeter[m,1] * (polygonParticle.perimeterPos[m,0] - polygonParticle.pos[0]) 
-            //                         - polygonParticle.forceOnPerimeter[m,0] * (polygonParticle.perimeterPos[m,1] - polygonParticle.pos[1]);
+            polygonParticle.forceFromFluid[0] += polygonParticle.forceOnPerimeter[m,0];
+            polygonParticle.forceFromFluid[1] += polygonParticle.forceOnPerimeter[m,1];
+            polygonParticle.torque += polygonParticle.forceOnPerimeter[m,1] * (polygonParticle.perimeterPos[m,0] - polygonParticle.pos[0]) 
+                                    - polygonParticle.forceOnPerimeter[m,0] * (polygonParticle.perimeterPos[m,1] - polygonParticle.pos[1]);
         } 
 
-        // polygonParticle.forceFromFluid[0] *= -0.5f;  
-        // polygonParticle.forceFromFluid[1] *= -0.5f; 
-        // polygonParticle.torque *= -0.5f; 
+        polygonParticle.forceFromFluid[0] *= -0.5f;  
+        polygonParticle.forceFromFluid[1] *= -0.5f; 
+        polygonParticle.torque *= -0.5f; 
 
-        // roundParticle.UpdatePosVelPeriodicX(DIM_X);
-        // for (int i = 0; i < 2; i++)
-        // {
-        //     roundParticle.vel[i] = (1f + 1f/roundParticle.density) * roundParticle.prevVel1[i]
-        //                             - 1f/roundParticle.density * roundParticle.prevVel2[i]
-        //                             + (roundParticle.forceFromFluid[i] + roundParticle.forceFromCollisions[i])/roundParticle.mass;
-        //                             // + (1f - 1f/roundParticle.density) * gravity[i];
-        //     roundParticle.pos[i] += (roundParticle.vel[i] + roundParticle.prevVel1[i])/2f;
-        //     roundParticle.prevVel2[i] = roundParticle.prevVel1[i];
-        //     roundParticle.prevVel1[i] = roundParticle.vel[i];
-        // }
-        // roundParticle.omega = (1f + 1f/roundParticle.density) * roundParticle.prevOmega1 
-        //                     - 1f/roundParticle.density * roundParticle.prevOmega2
-        //                     + roundParticle.torque/roundParticle.momentOfInertia;
-        // roundParticle.theta += (roundParticle.omega - roundParticle.prevOmega1)/2f;
-
-        // roundParticle.prevOmega2 = roundParticle.prevOmega1;
-        // roundParticle.prevOmega1 = roundParticle.omega;
-        // roundParticle.UpdatePerimeterPeriodicX(DIM_X);
+        if(falling) polygonParticle.UpdatePosVel(new float[2]{gx,gy});
+        else polygonParticle.UpdatePosVel();
+        polygonParticle.UpdateOmegaTheta();
+        // polygonParticle.theta = pTheta * Mathf.PI;
+        UpdatePolygonPerimeter();
     }
-
-    void DrawLine(bool initParticle = false)
+    void UpdatePolygonPerimeter()
     {
-        List<Vector3> points = new List<Vector3>();
         float circumferenceProgressPerStep = (float)1/lineRes;
         float TAU = 2*Mathf.PI;
         float radianProgressPerStep = circumferenceProgressPerStep*TAU;
         float scale;
         float sqrdSum = 0f;
+        float polygonTheta = 0f;
+        polygonTheta = -polygonParticle.theta;
         for (int i = 0; i < lineRes; i++)
         {
             float currentRadian = radianProgressPerStep*i;
@@ -461,10 +507,89 @@ public class LBMPoiWithPolygon : MonoBehaviour
         }
         scale = Mathf.Sqrt((2*area)/(sqrdSum * lineRes * Mathf.Sin(TAU/lineRes)));
 
+        float perimeterLength = 2f * Mathf.PI * modeCoeffs[0] * scale;
+        float segmentLength = 1f/(2f* (DIM_X/((canvas.localScale.x)*(plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x))));
+        dotCount = (int)(perimeterLength/segmentLength);
+        float theta = 0f;
+        float dtheta,r;
+        int spawnedDots = 0;
+        Vector3 spawnPos;
+        while (theta <= 2*Mathf.PI)
+        {
+            r = 0f;
+            for (int i = 0; i < modes; i++)
+            {
+                r += modeCoeffs[i]*Mathf.Cos(i*(theta)) + modeSinCoeffs[i]*Mathf.Sin(i*(theta));
+            }
+            r *= scale;
+            if(r <= Mathf.Epsilon)
+            {
+                theta += 0.1f * Mathf.PI;
+                continue;
+            }
+            spawnPos = new Vector3(Mathf.Cos((theta+polygonTheta)), Mathf.Sin((theta+polygonTheta)),0);
+            spawnPos *= r;
+            if(dotPositions.Count < spawnedDots + 1)
+            {
+                dotPositions.Add(spawnPos);
+            }
+            else
+            {
+                dotPositions[spawnedDots] = spawnPos;
+            }
+            spawnedDots++;
+
+            dtheta = segmentLength/r;
+            theta += dtheta;
+        }
+        if(spawnedDots<dotPositions.Count)
+        {
+            for (int i = 0; i < dotPositions.Count - spawnedDots; i++)
+            {
+                dotPositions.RemoveAt(dotPositions.Count-1);
+            }
+        }
+        polygonParticle.perimeterPointCount =  dotPositions.Count;
+        polygonParticle.perimeterPos = new float[polygonParticle.perimeterPointCount,2];
+        for (int i = 0; i < polygonParticle.perimeterPointCount; i++)
+        {
+            float newposx = dotPositions[i].x/canvas.localScale.x;
+            newposx *= DIM_X/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x);
+            float newposy = dotPositions[i].y/canvas.localScale.y;
+            newposy *= DIM_Y/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y);
+            polygonParticle.perimeterPos[i,0] = polygonParticle.pos[0] + newposx;
+            polygonParticle.perimeterPos[i,1] = polygonParticle.pos[1] + newposy;
+            polygonParticle.perimeterVel[i,0] = polygonParticle.vel[0] - polygonParticle.omega*(polygonParticle.perimeterPos[i,1] - polygonParticle.pos[1]);
+            polygonParticle.perimeterVel[i,1] = polygonParticle.vel[1] + polygonParticle.omega*(polygonParticle.perimeterPos[i,0] - polygonParticle.pos[0]);
+        }
+    }
+    void DrawLine(bool initParticle = false)
+    {
+        List<Vector3> points = new List<Vector3>();
+        float circumferenceProgressPerStep = (float)1/lineRes;
+        float TAU = 2*Mathf.PI;
+        float radianProgressPerStep = circumferenceProgressPerStep*TAU;
+        float scale;
+        float sqrdSum = 0f;
+        float polygonTheta = 0f;
+        if(initParticle) polygonTheta = 0f;
+        else polygonTheta = -polygonParticle.theta;
+        for (int i = 0; i < lineRes; i++)
+        {
+            float currentRadian = radianProgressPerStep*i + polygonTheta;
+            float newRadius = 0f;
+            for (int j = 0; j < modes; j++)
+            {
+                newRadius += modeCoeffs[j]*Mathf.Cos(j*(currentRadian)) + modeSinCoeffs[j]*Mathf.Sin(j*(currentRadian));
+            }
+            sqrdSum += newRadius * newRadius;
+        }
+        scale = Mathf.Sqrt((2*area)/(sqrdSum * lineRes * Mathf.Sin(TAU/lineRes)));
+
         realArea = 0f;
         for(int i = 0; i < lineRes; i++)
         {
-            float currentRadian = radianProgressPerStep*i;
+            float currentRadian = radianProgressPerStep*i + polygonTheta;
             Vector3 newPoint = new Vector3(Mathf.Cos(currentRadian), Mathf.Sin(currentRadian),0);
             float newRadius = 0f;
             for (int j = 0; j < modes; j++)
@@ -491,7 +616,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
             r = 0f;
             for (int i = 0; i < modes; i++)
             {
-                r += modeCoeffs[i]*Mathf.Cos(i*theta) + modeSinCoeffs[i]*Mathf.Sin(i*theta);
+                r += modeCoeffs[i]*Mathf.Cos(i*(theta+polygonTheta)) + modeSinCoeffs[i]*Mathf.Sin(i*(theta+polygonTheta));
             }
             r *= scale;
             if(r <= Mathf.Epsilon)
@@ -499,7 +624,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
                 theta += 0.1f * Mathf.PI;
                 continue;
             }
-            spawnPos = new Vector3(Mathf.Cos(theta), Mathf.Sin(theta),0);
+            spawnPos = new Vector3(Mathf.Cos((theta+polygonTheta)), Mathf.Sin((theta+polygonTheta)),0);
             spawnPos *= r;
 
 
@@ -533,7 +658,8 @@ public class LBMPoiWithPolygon : MonoBehaviour
         }
         // int pointCount = dots.Count;
         if(initParticle){
-            polygonParticle = new PolygonParticle(spawnedDots);
+            // polygonParticle = new PolygonParticle(spawnedDots,particleDensity,area,new float[2]{(float)(DIM_X)/2f,(float)(DIM_Y)/2f});
+            polygonParticle = new PolygonParticle(spawnedDots,particleDensity,area,new float[2]{(float)(DIM_X)/2f,350});
         }
         polygonParticle.perimeterPointCount =  dotPositions.Count;
         polygonParticle.perimeterPos = new float[polygonParticle.perimeterPointCount,2];
@@ -541,14 +667,19 @@ public class LBMPoiWithPolygon : MonoBehaviour
         {
             // perimeterPos[i,0] = dots[i].transform.position.x/canvas.localScale.x + plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x/2f;
             // perimeterPos[i,1] = dots[i].transform.position.y/canvas.localScale.y + plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y/2f;
-            polygonParticle.perimeterPos[i,0] = dotPositions[i].x/canvas.localScale.x + plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x/2f;
-            polygonParticle.perimeterPos[i,1] = dotPositions[i].y/canvas.localScale.y + plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y/2f;
-            polygonParticle.perimeterPos[i,0] *= DIM_X/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x);
-            polygonParticle.perimeterPos[i,1] *= DIM_Y/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y);
+            float newposx = dotPositions[i].x/canvas.localScale.x;
+            newposx *= DIM_X/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*plotImage.transform.localScale.x);
+            float newposy = dotPositions[i].y/canvas.localScale.y;
+            newposy *= DIM_Y/(plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*plotImage.transform.localScale.y);
+            polygonParticle.perimeterPos[i,0] = polygonParticle.pos[0] + newposx;
+            polygonParticle.perimeterPos[i,1] = polygonParticle.pos[1] + newposy;
         }
+        // print(polygonParticle.pos[0]);
+        // print(polygonParticle.pos[1]);
         points.Add(points[0]);
         line.positionCount = points.Count;
         line.SetPositions(points.ToArray());
+        line.transform.gameObject.SetActive(false);
     }
 }
 

@@ -71,6 +71,8 @@
      <Compile Include="Assets\Scripts\D2Q4AdvectionMain.cs" />
      <Compile Include="Assets\Scripts\LBMNatConvThermoPhoresis.cs" />
      <Compile Include="Assets\Scripts\LBMVicsek.cs" />
+     <Compile Include="Assets\Scripts\LBMFreePolygon.cs" />
+     <Compile Include="Assets\Scripts\HeatMapScene.cs" />
      <None Include="Assets\ComputeShaders\D2Q4Test.compute" />
      <None Include="Assets\Scripts\data.txt" />
      <None Include="Assets\ComputeShaders\LBMNatConv.compute" />
