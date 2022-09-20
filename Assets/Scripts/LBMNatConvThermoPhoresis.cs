@@ -35,21 +35,11 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
     float[,] rho, u, v, temp, forceFromGravityX, forceFromGravityY,speed, forceFromParticlesX,forceFromParticlesY;
     float[,,] f, f0, ftmp;
     float[,,] g, g0, gtmp;
-    float[,,] mf,mf0,mcf;
-    float[,,] mg,mg0,mcg;
-    float[,] mmu = new float[9,9],ui = new float[9,9],sf = new float[9,9],msf = new float[9,9];
-    float[,] mme = new float[5,5],ei = new float[5,5],sg = new float[5,5],msg = new float[5,5];
-    
     float umax, umin, tmp, u2, nu, chi, norm, taug, rbetag, h;
-    public RTType rtType = RTType.MRT;
     public float pr = 0.71f;
     public float ra =   10000.0f;
     public float tauf = 0.8f;
-
-    
-
     public int loopCount = 1;
-    
     public int particleCount = 25;
     public float particleDensity = 1.25f;
     public float particleRadius = 1.25f;
@@ -98,17 +88,8 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
         g = new float[5,DIM_X,DIM_Y];
         g0 = new float[5,DIM_X,DIM_Y];
         gtmp = new float[5,DIM_X,DIM_Y];
-        mf = new float[9,DIM_X,DIM_Y];
-        mf0 = new float[9,DIM_X,DIM_Y];
-        mcf = new float[9,DIM_X,DIM_Y];
-        mg = new float[5,DIM_X,DIM_Y];
-        mg0 = new float[5,DIM_X,DIM_Y];
-        mcg = new float[5,DIM_X,DIM_Y];
-        InitMatrices();
         gravity[0] = 0f;
         gravity[1] = -rbetag/beta;
-        // gravity[1] = 0f;
-        print(gravity[1]);
         roundParticles = new RoundParticle[particleCount];
         float scale = (2f*particleRadius*plotImage.transform.GetComponent<RectTransform>().sizeDelta.x * plotImage.transform.localScale.x)/(DIM_X*particlePrefab.GetComponent<RectTransform>().sizeDelta.x);
         plotSizeDelta = plotImage.transform.GetComponent<RectTransform>().sizeDelta;
@@ -222,71 +203,11 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
                         g0[k,i,j] = wg[k]*temp[i,j]*(1.0f + 3.0f*tmp);
                     }
 
-                    if(rtType == RTType.SRT)
-                    {
-                        f[k,i,j] = f[k,i,j] - (f[k,i,j] - f0[k,i,j])/tauf;
-                        if(k<5)
-                        g[k,i,j] = g[k,i,j] - (g[k,i,j] - g0[k,i,j])/taug;
-                    }
+                    f[k,i,j] = f[k,i,j] - (f[k,i,j] - f0[k,i,j])/tauf;
+                    if(k<5)
+                    g[k,i,j] = g[k,i,j] - (g[k,i,j] - g0[k,i,j])/taug;
                 }
             }   
-        }
-
-        if(rtType == RTType.MRT)
-        {
-            for (int i = 0; i < DIM_X; i++)
-            {
-                for (int j = 0; j < DIM_Y; j++)
-                {
-                    for(int k = 0; k <= 8; k++){
-                        mf[k,i,j] = 0.0f; mf0[k,i,j] = 0.0f;
-                        for(int m = 0; m <= 8; m++){
-                            mf[k,i,j] =  mf[k,i,j] + mmu[k,m]* f[m,i,j];
-                            mf0[k,i,j] = mf0[k,i,j] + mmu[k,m]*f0[m,i,j];
-                        }
-                        if(k<5)
-                        {
-                            mg[k,i,j] = 0.0f; mg0[k,i,j]= 0.0f;
-                            for(int m = 0; m <= 4; m++){
-                                mg[k,i,j] =  mg[k,i,j] + mme[k,m]* g[m,i,j];
-                                mg0[k,i,j] = mg0[k,i,j] + mme[k,m]*g0[m,i,j];
-                            }
-                        }
-                    }
-                }
-            }
-            for (int i = 0; i < DIM_X; i++)
-            {
-                for (int j = 0; j < DIM_Y; j++)
-                {
-                    for(int k = 0; k <= 8; k++){
-                        mcf[k,i,j] = 0.0f;
-                        for(int m = 0; m <= 8; m++){
-                            mcf[k,i,j] = mcf[k,i,j] + msf[k,m]*(mf[m,i,j] - mf0[m,i,j]);
-                        }
-                        if(k<5)
-                        {
-                            mcg[k,i,j] = 0.0f;
-                            for(int m = 0; m <= 4; m++){
-                                mcg[k,i,j] = mcg[k,i,j] + msg[k,m]*(mg[m,i,j] - mg0[m,i,j]);
-                            }
-                        }
-                    }
-                }
-            }
-            for (int i = 0; i < DIM_X; i++)
-            {
-                for (int j = 0; j < DIM_Y; j++)
-                {
-                    for(int k = 0; k <= 8; k++){
-                        f[k,i,j] = f[k,i,j] - mcf[k,i,j];
-                        if(k<5)
-                        {
-                            g[k,i,j] = g[k,i,j] - mcg[k,i,j];
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -493,24 +414,6 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
         { 
             roundParticles[n].forceFromCollisions[0] = 0f;
             roundParticles[n].forceFromCollisions[1] = 0f;
-            // tmp1 = Mathf.Abs(roundParticles[n].pos[1] + roundParticles[n].radius); 
-            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-            //     roundParticles[n].forceFromCollisions[1] = (roundParticles[n].pos[1] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            // }
-            // tmp1 = Mathf.Abs(DIM_Y-1-roundParticles[n].pos[1] + roundParticles[n].radius); 
-            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-            //     roundParticles[n].forceFromCollisions[1] = -(DIM_Y-1-roundParticles[n].pos[1] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            // }
-            // tmp1 = Mathf.Abs(roundParticles[n].pos[0] + roundParticles[n].radius); 
-            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-            //     roundParticles[n].forceFromCollisions[0] = (roundParticles[n].pos[0] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            // }
-            // tmp1 = Mathf.Abs(DIM_X-1-roundParticles[n].pos[0] + roundParticles[n].radius); 
-            // if(tmp1 < 2.0f*roundParticles[n].radius + zeta){
-            //     roundParticles[n].forceFromCollisions[0] = -(DIM_X-1-roundParticles[n].pos[0] + roundParticles[n].radius)*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            // }
-
-            
 
             for (int k = 0; k < particleCount; k++)
             {
@@ -632,122 +535,5 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
             roundParticles[n].UpdateOmegaTheta();
             roundParticles[n].UpdatePerimeter();
         }
-    }
-
-    void InitMatrices()
-    {
-        //.. collision matrix (f)
-        mmu[0,0]= 1.0f; mmu[0,1]= 1.0f; mmu[0,2]= 1.0f;
-        mmu[0,3]= 1.0f; mmu[0,4]= 1.0f; mmu[0,5]= 1.0f;
-        mmu[0,6]= 1.0f; mmu[0,7]= 1.0f; mmu[0,8]= 1.0f;
-
-        mmu[1,0]=-4.0f; mmu[1,1]=-1.0f; mmu[1,2]=-1.0f;
-        mmu[1,3]=-1.0f; mmu[1,4]=-1.0f; mmu[1,5]= 2.0f;
-        mmu[1,6]= 2.0f; mmu[1,7]= 2.0f; mmu[1,8]= 2.0f;
-
-        mmu[2,0]= 4.0f; mmu[2,1]=-2.0f; mmu[2,2]=-2.0f;
-        mmu[2,3]=-2.0f; mmu[2,4]=-2.0f; mmu[2,5]= 1.0f;
-        mmu[2,6]= 1.0f; mmu[2,7]= 1.0f; mmu[2,8]= 1.0f;
-
-        mmu[3,0]= 0.0f; mmu[3,1]= 1.0f; mmu[3,2]= 0.0f;
-        mmu[3,3]=-1.0f; mmu[3,4]= 0.0f; mmu[3,5]= 1.0f;
-        mmu[3,6]=-1.0f; mmu[3,7]=-1.0f; mmu[3,8]= 1.0f;
-
-        mmu[4,0]= 0.0f; mmu[4,1]=-2.0f; mmu[4,2]= 0.0f;
-        mmu[4,3]= 2.0f; mmu[4,4]= 0.0f; mmu[4,5]= 1.0f;
-        mmu[4,6]=-1.0f; mmu[4,7]=-1.0f; mmu[4,8]= 1.0f;
-
-        mmu[5,0]= 0.0f; mmu[5,1]= 0.0f; mmu[5,2]= 1.0f;
-        mmu[5,3]= 0.0f; mmu[5,4]=-1.0f; mmu[5,5]= 1.0f;
-        mmu[5,6]= 1.0f; mmu[5,7]=-1.0f; mmu[5,8]=-1.0f;
-
-        mmu[6,0]= 0.0f; mmu[6,1]= 0.0f; mmu[6,2]=-2.0f;
-        mmu[6,3]= 0.0f; mmu[6,4]= 2.0f; mmu[6,5]= 1.0f;
-        mmu[6,6]= 1.0f; mmu[6,7]=-1.0f; mmu[6,8]=-1.0f;
-
-        mmu[7,0]= 0.0f; mmu[7,1]= 1.0f; mmu[7,2]=-1.0f;
-        mmu[7,3]= 1.0f; mmu[7,4]=-1.0f; mmu[7,5]= 0.0f;
-        mmu[7,6]= 0.0f; mmu[7,7]= 0.0f; mmu[7,8]= 0.0f;
-        
-        mmu[8,0]= 0.0f; mmu[8,1]= 0.0f; mmu[8,2]= 0.0f;
-        mmu[8,3]= 0.0f; mmu[8,4]= 0.0f; mmu[8,5]= 1.0f;
-        mmu[8,6]=-1.0f; mmu[8,7]= 1.0f; mmu[8,8]=-1.0f;
-
-        //
-        ui[0,0]= 1.0f/9.0f ; ui[0,1]= -1.0f/9.0f; ui[0,2]= 1.0f/9.0f ;
-        ui[0,3]= 0.0f     ; ui[0,4]= 0.0f     ; ui[0,5]= 0.0f     ;
-        ui[0,6]= 0.0f     ; ui[0,7]= 0.0f     ; ui[0,8]= 0.0f     ;
-
-        ui[1,0]= 1.0f/9.0f ; ui[1,1]=-1.0f/36.0f; ui[1,2]=-1.0f/18.0f;
-        ui[1,3]= 1.0f/6.0f ; ui[1,4]=-1.0f/6.0f ; ui[1,5]= 0.0f     ;
-        ui[1,6]= 0.0f     ; ui[1,7]= 1.0f/4.0f ; ui[1,8]= 0.0f     ;
-
-        ui[2,0]= 1.0f/9.0f ; ui[2,1]=-1.0f/36.0f; ui[2,2]=-1.0f/18.0f;
-        ui[2,3]= 0.0f     ; ui[2,4]= 0.0f     ; ui[2,5]= 1.0f/6.0f ;
-        ui[2,6]=-1.0f/6.0f ; ui[2,7]=-1.0f/4.0f ; ui[2,8]= 0.0f     ;
-
-        ui[3,0]= 1.0f/9.0f ; ui[3,1]=-1.0f/36.0f; ui[3,2]=-1.0f/18.0f;
-        ui[3,3]=-1.0f/6.0f ; ui[3,4]= 1.0f/6.0f ; ui[3,5]= 0.0f     ;
-        ui[3,6]= 0.0f     ; ui[3,7]= 1.0f/4.0f ; ui[3,8]= 0.0f     ;
-
-        ui[4,0]= 1.0f/9.0f ; ui[4,1]=-1.0f/36.0f; ui[4,2]=-1.0f/18.0f;
-        ui[4,3]= 0.0f     ; ui[4,4]= 0.0f     ; ui[4,5]=-1.0f/6.0f ;
-        ui[4,6]= 1.0f/6.0f ; ui[4,7]=-1.0f/4.0f ; ui[4,8]= 0.0f     ;
-
-        ui[5,0]= 1.0f/9.0f ; ui[5,1]= 1.0f/18.0f; ui[5,2]= 1.0f/36.0f;
-        ui[5,3]= 1.0f/6.0f ; ui[5,4]= 1.0f/12.0f; ui[5,5]= 1.0f/6.0f ;
-        ui[5,6]= 1.0f/12.0f; ui[5,7]= 0.0f     ; ui[5,8]= 1.0f/4.0f ;
-
-        ui[6,0]= 1.0f/9.0f ; ui[6,1]= 1.0f/18.0f; ui[6,2]= 1.0f/36.0f;
-        ui[6,3]=-1.0f/6.0f ; ui[6,4]=-1.0f/12.0f; ui[6,5]= 1.0f/6.0f ;
-        ui[6,6]= 1.0f/12.0f; ui[6,7]= 0.0f     ; ui[6,8]=-1.0f/4.0f ;
-
-        ui[7,0]= 1.0f/9.0f ; ui[7,1]= 1.0f/18.0f; ui[7,2]= 1.0f/36.0f;
-        ui[7,3]=-1.0f/6.0f ; ui[7,4]=-1.0f/12.0f; ui[7,5]=-1.0f/6.0f ;
-        ui[7,6]=-1.0f/12.0f; ui[7,7]= 0.0f     ; ui[7,8]= 1.0f/4.0f ;
-        
-        ui[8,0]= 1.0f/9.0f ; ui[8,1]= 1.0f/18.0f; ui[8,2]= 1.0f/36.0f;
-        ui[8,3]= 1.0f/6.0f ; ui[8,4]= 1.0f/12.0f; ui[8,5]=-1.0f/6.0f ;
-        ui[8,6]=-1.0f/12.0f; ui[8,7]= 0.0f     ; ui[8,8]=-1.0f/4.0f ;
-        
-        for(int i = 0; i <= 8; i++){ for(int j = 0; j <= 8; j++){
-    sf[i,j] = 0.0f;
-  } }
-
-  sf[0,0] = 0.0f; sf[1,1] = 1.5f     ; sf[2,2] = 1.4f     ;
-  sf[3,3] = 0.0f; sf[4,4] = 1.5f     ; sf[5,5] = 0.0f     ;
-  sf[6,6] = 1.5f; sf[7,7] = 1.0f/tauf; sf[8,8] = 1.0f/tauf;
-
-  for(int i = 0; i <= 8; i++){ for(int j = 0; j <= 8; j++){
-    msf[i,j] = 0.0f;
-    for(int k = 0; k <= 8; k++){
-      msf[i,j] = msf[i,j] + ui[i,k]*sf[k,j];
-    }
-  } }
-
-//.. collision matrix (g)
-  mme[0,0]= 1.0f;mme[0,1]= 1.0f;mme[0,2]= 1.0f;mme[0,3]= 1.0f;mme[0,4]= 1.0f;
-  mme[1,0]= 0.0f;mme[1,1]= 1.0f;mme[1,2]= 0.0f;mme[1,3]=-1.0f;mme[1,4]= 0.0f;
-  mme[2,0]= 0.0f;mme[2,1]= 0.0f;mme[2,2]= 1.0f;mme[2,3]= 0.0f;mme[2,4]=-1.0f;
-  mme[3,0]= 4.0f;mme[3,1]=-1.0f;mme[3,2]=-1.0f;mme[3,3]=-1.0f;mme[3,4]=-1.0f;
-  mme[4,0]= 0.0f;mme[4,1]= 1.0f;mme[4,2]=-1.0f;mme[4,3]= 1.0f;mme[4,4]=-1.0f;
-
-  ei[0,0]=0.2f;ei[0,1]= 0.0f;ei[0,2]= 0.0f;ei[0,3]= 0.20f;ei[0,4]= 0.00f;
-  ei[1,0]=0.2f;ei[1,1]= 0.5f;ei[1,2]= 0.0f;ei[1,3]=-0.05f;ei[1,4]= 0.25f;
-  ei[2,0]=0.2f;ei[2,1]= 0.0f;ei[2,2]= 0.5f;ei[2,3]=-0.05f;ei[2,4]=-0.25f;
-  ei[3,0]=0.2f;ei[3,1]=-0.5f;ei[3,2]= 0.0f;ei[3,3]=-0.05f;ei[3,4]= 0.25f;
-  ei[4,0]=0.2f;ei[4,1]= 0.0f;ei[4,2]=-0.5f;ei[4,3]=-0.05f;ei[4,4]=-0.25f;
-
-  for(int i = 0; i <= 4; i++){ for(int j = 0; j <= 4; j++){
-    sg[i,j]  = 0.0f;
-  } }
-  sg[0,0] = 0.0f; sg[1,1] = 1.0f/taug; sg[2,2] = 1.0f/taug; sg[3,3] = 1.0f; sg[4,4] = 1.0f;
-
-  for(int i = 0; i <= 4; i++){ for(int j = 0; j <= 4; j++){
-     msg[i,j] = 0.0f;
-     for(int k = 0; k <= 4; k++){
-       msg[i,j] = msg[i,j] + ei[i,k] * sg[k,j];
-     }
-   } }
     }
 }

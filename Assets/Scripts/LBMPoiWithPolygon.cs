@@ -50,6 +50,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
     public int modes = 4;
     public float[] modeCoeffs = new float[4];
     public float[] modeSinCoeffs = new float[4];
+    public float offset = 0f;
     public float area = 1000f;
     public float realArea;
     public GameObject dotPrefab;
@@ -61,6 +62,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
     public Slider[] CosSliders;
     public Slider[] SinSliders;
     public Transform canvas;
+    public Color perimColor;
     PolygonParticle polygonParticle;
 
     List<Vector3> dotPositions = new List<Vector3>();
@@ -174,7 +176,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
             }
         }
         // roundParticle.PlotParticlePerimeter(ref plotPixels,DIM_X);
-        polygonParticle.PlotParticlePerimeter(ref plotPixels,DIM_X,new Color(0,0,0,1));
+        polygonParticle.PlotParticlePerimeter(ref plotPixels,DIM_X,perimColor);
         plotTexture.SetPixels(plotPixels);
         plotTexture.Apply();
         vectorField.UpdateVectors(u,v,DIM_Y,maxSpeed,vectorFieldOn);
@@ -464,8 +466,8 @@ public class LBMPoiWithPolygon : MonoBehaviour
         realArea = 0f;
         for(int i = 0; i < lineRes; i++)
         {
-            float currentRadian = radianProgressPerStep*i;
-            Vector3 newPoint = new Vector3(Mathf.Cos(currentRadian), Mathf.Sin(currentRadian),0);
+            float currentRadian = radianProgressPerStep*i ;
+            Vector3 newPoint = new Vector3(Mathf.Cos(currentRadian + offset*Mathf.PI), Mathf.Sin(currentRadian + offset*Mathf.PI),0);
             float newRadius = 0f;
             for (int j = 0; j < modes; j++)
             {
@@ -489,9 +491,10 @@ public class LBMPoiWithPolygon : MonoBehaviour
         while (theta <= 2*Mathf.PI)
         {
             r = 0f;
+            float currentRadian = theta ;
             for (int i = 0; i < modes; i++)
             {
-                r += modeCoeffs[i]*Mathf.Cos(i*theta) + modeSinCoeffs[i]*Mathf.Sin(i*theta);
+                r += modeCoeffs[i]*Mathf.Cos(i*currentRadian) + modeSinCoeffs[i]*Mathf.Sin(i*currentRadian);
             }
             r *= scale;
             if(r <= Mathf.Epsilon)
@@ -499,7 +502,7 @@ public class LBMPoiWithPolygon : MonoBehaviour
                 theta += 0.1f * Mathf.PI;
                 continue;
             }
-            spawnPos = new Vector3(Mathf.Cos(theta), Mathf.Sin(theta),0);
+            spawnPos = new Vector3(Mathf.Cos(currentRadian+ offset*Mathf.PI), Mathf.Sin(currentRadian+ offset*Mathf.PI),0);
             spawnPos *= r;
 
 
