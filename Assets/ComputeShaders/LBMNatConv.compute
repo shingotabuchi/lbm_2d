@@ -13,9 +13,12 @@
 #pragma kernel ConstantAdiabaticBoundaryX
 #pragma kernel ConstantAdiabaticBoundaryY
 #pragma kernel CalculateTempAndSpeed
+#pragma kernel IBMInit
+#pragma kernel IBMPP
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 RWStructuredBuffer<float> rho, u, temp,speed,f,g,ftmp,gtmp,p;
+RWStructuredBuffer<float> forceFromCollisions,forceFromFluid,torque,radius,pos;
 RWStructuredBuffer<float> minMaxTempAndSpeed;
 // float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
 // float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
@@ -24,7 +27,8 @@ RWStructuredBuffer<float> minMaxTempAndSpeed;
 
 float omega,wallTemp1,wallTemp2,wallTemp3,wallTemp4;
 float tauf,taug,rbetag;
-int DIM_X,DIM_Y;
+float zeta,epsw;
+int DIM_X,DIM_Y,particleCount;
 
 [numthreads(64,1,1)]
 void InitTempXGradient (uint3 id : SV_DispatchThreadID)
@@ -343,5 +347,38 @@ void CalculateTempAndSpeed (uint3 id : SV_DispatchThreadID)
     // minMaxTempAndSpeed[1] = max(minMaxTempAndSpeed[1],temp[id.x]);
     // minMaxTempAndSpeed[2] = min(minMaxTempAndSpeed[2],speed[id.x]);
     // minMaxTempAndSpeed[3] = max(minMaxTempAndSpeed[3],speed[id.x]);
+}
+
+[numthreads(64,1,1)]
+void IBMInit (uint3 id : SV_DispatchThreadID)
+{
+    forceFromCollisions[id.x + 0*particleCount] = 0.0;
+    forceFromCollisions[id.x + 1*particleCount] = 0.0;
+    forceFromFluid[id.x + 0*particleCount] = 0.0;
+    forceFromFluid[id.x + 1*particleCount] = 0.0;
+    torque[id.x] = 0.0;
+    float wallDistance;
+    wallDistance = abs(pos[id.x + 1*particleCount]);
+    if(wallDistance < radius[id.x]) pos[id.x + 1*particleCount] = radius[id.x];
+    wallDistance = abs(DIM_Y-1-pos[id.x + 1*particleCount]);
+    if(wallDistance < radius[id.x]) pos[id.x + 1*particleCount] = DIM_Y-1-radius[id.x];
+    wallDistance = abs(pos[id.x + 0*particleCount]);
+    if(wallDistance < radius[id.x]) pos[id.x + 0*particleCount] = radius[id.x];
+    wallDistance = abs(DIM_X-1-pos[id.x + 0*particleCount]);
+    if(wallDistance < radius[id.x]) pos[id.x + 0*particleCount] = DIM_X-1-radius[id.x];
+}
+
+[numthreads(8,8,1)]
+void IBMPP (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x==id.y) return;
+    float dist = sqrt( (pos[id.x + 0*particleCount]-pos[id.y + 0*particleCount])*(pos[id.x + 0*particleCount]-pos[id.y + 0*particleCount]) + (pos[id.x + 1*particleCount]-pos[id.y + 1*particleCount])*(pos[id.x + 1*particleCount]-pos[id.y + 1*particleCount]) );
+    for (int i = 0; i < 2; i++)
+    {
+        if(dist < 2.0*radius[id.x] + zeta)
+        {
+            forceFromCollisions[id.x + i*particleCount] += (pos[id.x + i*particleCount] - pos[id.y + i*particleCount])*(2.0*radius[id.x] - dist + zeta)*(2.0*radius[id.x] - dist + zeta)/epsw;
+        }
+    }
 }
     

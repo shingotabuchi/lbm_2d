@@ -80,11 +80,16 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         kernelConstantAdiabaticBoundaryY,
         kernelAdiabaticConstantBoundaryX,
         kernelAdiabaticConstantBoundaryY;
+    int kernelIBMInit,
+        kernelIBMPP;
     uint threadGroupSize;
-    int threadGroupCount,threadGroupCountDIM_X,threadGroupCountDIM_Y;
+    int threadGroupCount,threadGroupCountDIM_X,threadGroupCountDIM_Y,threadGroupCountParticleCount;
+    int threadGroupCountParticleParticle;
     ComputeBuffer rhoComputeBuffer, fComputeBuffer,ftmpComputeBuffer,gComputeBuffer,gtmpComputeBuffer;
     ComputeBuffer uComputeBuffer, vComputeBuffer,tempComputeBuffer,speedComputeBuffer;
     ComputeBuffer pComputeBuffer;
+
+    ComputeBuffer forceFromCollisionsComputeBuffer,forceFromFluidComputeBuffer,torqueComputeBuffer,radiusComputeBuffer,posComputeBuffer;
 
     public Color particleColor;
     // Start is called before the first frame update
@@ -134,17 +139,24 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         kernelAdiabaticConstantBoundaryX = computeShader.FindKernel("AdiabaticConstantBoundaryX");
         kernelAdiabaticConstantBoundaryY = computeShader.FindKernel("AdiabaticConstantBoundaryY");
         kernelCalculateTempAndSpeed = computeShader.FindKernel("CalculateTempAndSpeed");
+        kernelIBMInit = computeShader.FindKernel("IBMInit");
+        kernelIBMPP = computeShader.FindKernel("IBMPP");
         
         computeShader.GetKernelThreadGroupSizes(kernelInitTempXGradient, out threadGroupSize, out _, out _);
         threadGroupCount = (int) ((DIM_X*DIM_Y + (threadGroupSize - 1)) / threadGroupSize);
         threadGroupCountDIM_X = (int) ((DIM_X + (threadGroupSize - 1)) / threadGroupSize);
         threadGroupCountDIM_Y = (int) ((DIM_Y + (threadGroupSize - 1)) / threadGroupSize);
+        threadGroupCountParticleCount = (int) ((particleCount + (threadGroupSize - 1)) / threadGroupSize);
+        threadGroupCountParticleParticle = (int) ((particleCount*particleCount + (threadGroupSize - 1)) / threadGroupSize);
         computeShader.SetInt("DIM_X",DIM_X);
         computeShader.SetInt("DIM_Y",DIM_Y);
+        computeShader.SetInt("particleCount",particleCount);
 
         computeShader.SetFloat("tauf",tauf);
         computeShader.SetFloat("taug",taug);
         computeShader.SetFloat("rbetag",rbetag);
+        computeShader.SetFloat("zeta",zeta);
+        computeShader.SetFloat("epsw",epsw);
 
         computeShader.SetFloat("wallTemp1",wallTemp1);
         computeShader.SetFloat("wallTemp2",wallTemp2);
@@ -165,6 +177,28 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         pComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y*2, sizeof(float));
         tempComputeBuffer = new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
         speedComputeBuffer = new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
+        
+        forceFromCollisionsComputeBuffer = new ComputeBuffer(particleCount*2,sizeof(float));
+        forceFromFluidComputeBuffer = new ComputeBuffer(particleCount*2,sizeof(float));
+        torqueComputeBuffer = new ComputeBuffer(particleCount,sizeof(float));
+        radiusComputeBuffer = new ComputeBuffer(particleCount,sizeof(float));
+        posComputeBuffer = new ComputeBuffer(particleCount*2,sizeof(float));
+
+        forceFromCollisionsComputeBuffer.SetData(roundParticles.forceFromCollisions);
+        forceFromFluidComputeBuffer.SetData(roundParticles.forceFromFluid);
+        torqueComputeBuffer.SetData(roundParticles.torque);
+        radiusComputeBuffer.SetData(roundParticles.radius);
+        posComputeBuffer.SetData(roundParticles.pos);
+
+        computeShader.SetBuffer(kernelIBMInit,"forceFromCollisions",forceFromCollisionsComputeBuffer);
+        computeShader.SetBuffer(kernelIBMInit,"forceFromFluid",forceFromFluidComputeBuffer);
+        computeShader.SetBuffer(kernelIBMInit,"torque",torqueComputeBuffer);
+        computeShader.SetBuffer(kernelIBMInit,"radius",radiusComputeBuffer);
+        computeShader.SetBuffer(kernelIBMInit,"pos",posComputeBuffer);
+
+        computeShader.SetBuffer(kernelIBMPP,"forceFromCollisions",forceFromCollisionsComputeBuffer);
+        computeShader.SetBuffer(kernelIBMPP,"radius",radiusComputeBuffer);
+        computeShader.SetBuffer(kernelIBMPP,"pos",posComputeBuffer);
         // minMaxTempAndSpeedBuffer = new ComputeBuffer(4, sizeof(float));
 
         if(initTemp == InitialTemperatureDistribution.XGradient)
@@ -243,6 +277,10 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         speed = new float[DIM_X*DIM_Y];
         u = new float[DIM_X*DIM_Y*2];
         p = new float[DIM_X*DIM_Y*2];
+        for (int i = 0; i < DIM_X*DIM_Y*2; i++)
+        {
+            p[i] = 0f;
+        }
         temp = new float[DIM_X*DIM_Y];
     }
 
@@ -275,8 +313,8 @@ public class LBMNatConvThermPartcom : MonoBehaviour
 
 
         computeShader.Dispatch(kernelCalculateTempAndSpeed,threadGroupCount,1,1);
-        tempComputeBuffer.GetData(temp);
-        uComputeBuffer.GetData(u);
+        // tempComputeBuffer.GetData(temp);
+        // uComputeBuffer.GetData(u);
         pComputeBuffer.GetData(p);
         // fyComputeBuffer.GetData(fy);
         ImmersedBoundary();
@@ -298,6 +336,8 @@ public class LBMNatConvThermPartcom : MonoBehaviour
 
     void UpdatePlot()
     {
+        tempComputeBuffer.GetData(temp);
+        uComputeBuffer.GetData(u);
         speedComputeBuffer.GetData(speed);
         maxSpeed = 0f;
         minSpeed = Mathf.Infinity;
@@ -345,10 +385,30 @@ public class LBMNatConvThermPartcom : MonoBehaviour
     void ImmersedBoundary()
     {
         float tmp1,tmp2,tmp3;
-        for(int n = 0; n < particleCount; n++) 
-        { 
+        for (int n = 0; n < particleCount; n++)
+        {
             roundParticles.forceFromCollisions[n + 0*particleCount] = 0f;
             roundParticles.forceFromCollisions[n + 1*particleCount] = 0f;
+            roundParticles.forceFromFluid[n + 0*particleCount] = 0f;
+            roundParticles.forceFromFluid[n + 1*particleCount] = 0f;
+            roundParticles.torque[n] = 0f;
+            float wallDistance;
+            wallDistance = Mathf.Abs(roundParticles.pos[n + 1*particleCount]);
+            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 1*particleCount] = roundParticles.radius[n];
+            wallDistance = Mathf.Abs(DIM_Y-1-roundParticles.pos[n + 1*particleCount]);
+            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 1*particleCount] = DIM_Y-1-roundParticles.radius[n];
+            wallDistance = Mathf.Abs(roundParticles.pos[n + 0*particleCount]);
+            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 0*particleCount] =roundParticles.radius[n];
+            wallDistance = Mathf.Abs(DIM_X-1-roundParticles.pos[n + 0*particleCount]);
+            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 0*particleCount] = DIM_X-1-roundParticles.radius[n];
+        }
+        // posComputeBuffer.SetData(roundParticles.pos);
+        // computeShader.Dispatch(kernelIBMInit, threadGroupCountParticleCount, 1, 1);
+        // computeShader.Dispatch(kernelIBMPP, threadGroupCountParticleCount, threadGroupCountParticleCount, 1);
+        
+
+        for(int n = 0; n < particleCount; n++) 
+        { 
             for (int k = 0; k < particleCount; k++)
             {
                 if(k==n) continue;
@@ -359,24 +419,15 @@ public class LBMNatConvThermPartcom : MonoBehaviour
                     if(dist < 2.0f*roundParticles.radius[n] + zeta)
                     {
                         roundParticles.forceFromCollisions[n + i*particleCount] += (roundParticles.pos[n + i*particleCount] - roundParticles.pos[k + i*particleCount])*(2.0f*roundParticles.radius[n] - dist + zeta)*(2.0f*roundParticles.radius[n] - dist + zeta)/epsw;
-                        print(roundParticles.forceFromCollisions[n + i*particleCount]);
                     }
                 }
             }
+        }
 
-            float wallDistance;
-            wallDistance = Mathf.Abs(roundParticles.pos[n + 1*particleCount]);
-            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 1*particleCount] = roundParticles.radius[n];
-            wallDistance = Mathf.Abs(DIM_Y-1-roundParticles.pos[n + 1*particleCount]);
-            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 1*particleCount] = DIM_Y-1-roundParticles.radius[n];
-            wallDistance = Mathf.Abs(roundParticles.pos[n + 0*particleCount]);
-            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 0*particleCount] =roundParticles.radius[n];
-            wallDistance = Mathf.Abs(DIM_X-1-roundParticles.pos[n + 0*particleCount]);
-            if(wallDistance < roundParticles.radius[n]) roundParticles.pos[n + 0*particleCount] = DIM_X-1-roundParticles.radius[n];
+        
 
-            roundParticles.forceFromFluid[n + 0*particleCount] = 0f;
-            roundParticles.forceFromFluid[n + 1*particleCount] = 0f;
-            roundParticles.torque[n] = 0f;
+        for(int n = 0; n < particleCount; n++) 
+        { 
             for(int m = 0; m < roundParticles.perimeterPointCount[n] ; m++) 
             {
                 roundParticles.perimeterFluidVel[n + (m + 0*roundParticles.maxPerimeterPointCount)*particleCount] = 0f;
@@ -462,7 +513,14 @@ public class LBMNatConvThermPartcom : MonoBehaviour
                 roundParticles.torque[n] += roundParticles.forceOnPerimeter[n + (m + 1*roundParticles.maxPerimeterPointCount)*particleCount] * (roundParticles.perimeterPos[n + (m + 0*roundParticles.maxPerimeterPointCount)*particleCount] - roundParticles.pos[n + 0*particleCount]) 
                                         - roundParticles.forceOnPerimeter[n + (m + 0*roundParticles.maxPerimeterPointCount)*particleCount] * (roundParticles.perimeterPos[n + (m + 1*roundParticles.maxPerimeterPointCount)*particleCount] - roundParticles.pos[n + 1*particleCount]);
             } 
+        }
 
+        forceFromCollisionsComputeBuffer.GetData(roundParticles.forceFromCollisions);
+        forceFromFluidComputeBuffer.GetData(roundParticles.forceFromFluid);
+        torqueComputeBuffer.GetData(roundParticles.torque);
+        posComputeBuffer.GetData(roundParticles.pos);
+        for (int n = 0; n < particleCount; n++)
+        {
             roundParticles.forceFromFluid[n + 0*particleCount] *= -2f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];  
             roundParticles.forceFromFluid[n + 1*particleCount] *= -2f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];  
             roundParticles.torque[n] *= -2f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];  
@@ -470,44 +528,24 @@ public class LBMNatConvThermPartcom : MonoBehaviour
             roundParticles.UpdateOmegaTheta(n);
             roundParticles.UpdatePerimeter(n);
         }
-        // HashSet<string> searchedPairs = new HashSet<string>();
-        // for (int n = 0; n < particleCount; n++)
-        // {
-        //     for (int k = 0; k < particleCount; k++)
-        //     {
-        //         if(n==k)continue;
-        //         string pairstring1 = n.ToString() + ":" + k.ToString();
-        //         string pairstring2 = k.ToString() + ":" + n.ToString();
-        //         if(searchedPairs.Contains(pairstring1)) continue;
-        //         searchedPairs.Add(pairstring1);
-        //         searchedPairs.Add(pairstring2);
+    }
 
-        //         float dist = roundParticles.ParticleDistance(n,k);
-        //         if(dist >= roundParticles.radius[n]*2f) continue;
+    private void OnDestroy() {
+        rhoComputeBuffer.Dispose(); 
+        fComputeBuffer.Dispose();
+        ftmpComputeBuffer.Dispose();
+        gComputeBuffer.Dispose();
+        gtmpComputeBuffer.Dispose();
+        uComputeBuffer.Dispose();
+        vComputeBuffer.Dispose();
+        tempComputeBuffer.Dispose();
+        speedComputeBuffer.Dispose();
+        pComputeBuffer.Dispose();
 
-        //         Vector2 relVel = new Vector2(roundParticles.vel[k + 0*particleCount] - roundParticles.vel[n + 0*particleCount],roundParticles.vel[k + 1*particleCount] - roundParticles.vel[n + 1*particleCount]);
-        //         Vector2 unitVecn2k = new Vector2(roundParticles.pos[k + 0*particleCount] - roundParticles.pos[n + 0*particleCount],roundParticles.pos[k + 1*particleCount] - roundParticles.pos[n + 1*particleCount]);
-        //         unitVecn2k.Normalize();
-        //         float naiseki =  relVel.x * unitVecn2k.x + relVel.y * unitVecn2k.y;
-        //         Vector2 forceVecn2k = unitVecn2k * Mathf.Abs(naiseki);
-
-        //         roundParticles.vel[k + 0*particleCount] += forceVecn2k.x;
-        //         roundParticles.vel[k + 1*particleCount] += forceVecn2k.y;
-
-        //         roundParticles.vel[n + 0*particleCount] -= forceVecn2k.x;
-        //         roundParticles.vel[n + 1*particleCount] -= forceVecn2k.y;
-
-        //         roundParticles.vel[k + 0*particleCount] += unitVecn2k.x * dist/2f;
-        //         roundParticles.vel[k + 1*particleCount] += unitVecn2k.y * dist/2f;
-
-        //         roundParticles.vel[n + 0*particleCount] -= unitVecn2k.x * dist/2f;
-        //         roundParticles.vel[n + 1*particleCount] -= unitVecn2k.y * dist/2f;
-
-        //         roundParticles.UpdatePosVelCollision(n);
-        //         roundParticles.UpdatePosVelCollision(k);
-        //         roundParticles.UpdatePerimeter(n);
-        //         roundParticles.UpdatePerimeter(k);
-        //     }
-        // }
+        forceFromCollisionsComputeBuffer.Dispose();
+        forceFromFluidComputeBuffer.Dispose();
+        torqueComputeBuffer.Dispose();
+        radiusComputeBuffer.Dispose();
+        posComputeBuffer.Dispose();
     }
 }
