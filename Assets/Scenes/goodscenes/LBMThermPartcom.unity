@@ -422,8 +422,8 @@ MonoBehaviour:
   wallTemp3: 0
   wallTemp4: 0
   normalizeHeatMap: 1
-  DIM_X: 64
-  DIM_Y: 64
+  DIM_X: 32
+  DIM_Y: 32
   maxTemp: 0
   minTemp: 0
   maxSpeed: 0
@@ -437,7 +437,7 @@ MonoBehaviour:
   particleCount: 5
   particleDensity: 1.001
   particleRadius: 2
-  zeta: 0.1
+  zeta: 3
   epsw: 10
   beta: 0.01
   initTemp: 0
@@ -446,6 +446,7 @@ MonoBehaviour:
   particleTemp: 1
   particleLowerTemp: 0
   computeShader: {fileID: 7200000, guid: 1e29ea42d45111c4db55e9d229ff9d22, type: 3}
+  particleColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!1 &1342449316
 GameObject:
   m_ObjectHideFlags: 0

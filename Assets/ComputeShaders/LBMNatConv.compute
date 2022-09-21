@@ -15,7 +15,7 @@
 #pragma kernel CalculateTempAndSpeed
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWStructuredBuffer<float> rho, u, v, temp,speed,f,g,ftmp,gtmp,px,py;
+RWStructuredBuffer<float> rho, u, temp,speed,f,g,ftmp,gtmp,p;
 RWStructuredBuffer<float> minMaxTempAndSpeed;
 // float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
 // float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
@@ -34,18 +34,18 @@ void InitTempXGradient (uint3 id : SV_DispatchThreadID)
     float wg[5] = {1.0/3.0,1.0/6.0,1.0/6.0,1.0/6.0,1.0/6.0};
     float wf[9] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
     float u2,f0,g0,tmp;
-    u[id.x] = 0.0; v[id.x] = 0.0; 
+    u[0 + id.x*2] = 0.0; u[1 + id.x*2] = 0.0; 
     rho[id.x] = 1.0;
     // px[id.x] = 0.0;
     // py[id.x] = 0.0;
 
     temp[id.x] = (float)(DIM_X-1 - id.x%DIM_X)/(float)(DIM_X-1 - 1);
 
-    u2 = u[id.x]*u[id.x] + v[id.x]*v[id.x];   
+    u2 = u[0 + id.x*2]*u[0 + id.x*2] + u[1 + id.x*2]*u[1 + id.x*2];   
 
     for (int k = 0; k < 9; k++)
     {
-        tmp = cx[k]*u[id.x] + cy[k]*v[id.x];     
+        tmp = cx[k]*u[0 + id.x*2] + cy[k]*u[1 + id.x*2];     
         // f0 = wf[k]*rho[id.x]*(1.0 +3.0*tmp +9.0/2.0*tmp*tmp -3.0/2.0*u2);
         f0 = wf[k]*1.0;
         f[k + (id.x)*9] = f0;
@@ -65,17 +65,17 @@ void InitTempYGradient (uint3 id : SV_DispatchThreadID)
     float wg[5] = {1.0/3.0,1.0/6.0,1.0/6.0,1.0/6.0,1.0/6.0};
     float wf[9] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
     float u2,f0,g0,tmp;
-    u[id.x] = 0.0; v[id.x] = 0.0; 
+    u[0 + id.x*2] = 0.0; u[1 + id.x*2] = 0.0; 
     rho[id.x] = 1.0;
     // px[id.x] = 0.0;
     // py[id.x] = 0.0;
     temp[id.x] = (float)(DIM_Y-1 - id.x/DIM_X)/(float)(DIM_Y-1 - 1);
 
-    u2 = u[id.x]*u[id.x] + v[id.x]*v[id.x];   
+    u2 = u[0 + id.x*2]*u[0 + id.x*2] + u[1 + id.x*2]*u[1 + id.x*2];   
 
     for (int k = 0; k < 9; k++)
     {
-        tmp = cx[k]*u[id.x] + cy[k]*v[id.x];     
+        tmp = cx[k]*u[0 + id.x*2] + cy[k]*u[1 + id.x*2];     
         // f0 = wf[k]*rho[id.x]*(1.0 +3.0*tmp +9.0/2.0*tmp*tmp -3.0/2.0*u2);
         f0 = wf[k]*1.0;
         f[k + (id.x)*9] = f0;
@@ -95,17 +95,17 @@ void InitTempAllZero (uint3 id : SV_DispatchThreadID)
     float wg[5] = {1.0/3.0,1.0/6.0,1.0/6.0,1.0/6.0,1.0/6.0};
     float wf[9] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
     float u2,f0,g0,tmp;
-    u[id.x] = 0.0; v[id.x] = 0.0; 
+    u[0 + id.x*2] = 0.0; u[1 + id.x*2] = 0.0; 
     rho[id.x] = 1.0;
     // px[id.x] = 0.0;
     // py[id.x] = 0.0;
     temp[id.x] = 0;
 
-    u2 = u[id.x]*u[id.x] + v[id.x]*v[id.x];   
+    u2 = u[0 + id.x*2]*u[0 + id.x*2] + u[1 + id.x*2]*u[1 + id.x*2];   
 
     for (int k = 0; k < 9; k++)
     {
-        tmp = cx[k]*u[id.x] + cy[k]*v[id.x];     
+        tmp = cx[k]*u[0 + id.x*2] + cy[k]*u[1 + id.x*2];     
         // f0 = wf[k]*rho[id.x]*(1.0 +3.0*tmp +9.0/2.0*tmp*tmp -3.0/2.0*u2);
         f0 = wf[k]*1.0;
         f[k + (id.x)*9] = f0;
@@ -125,14 +125,14 @@ void Collision (uint3 id : SV_DispatchThreadID)
     float wg[5] = {1.0/3.0,1.0/6.0,1.0/6.0,1.0/6.0,1.0/6.0};
     float wf[9] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
     float u2,f0,g0,tmp,gx,gy;
-    u2 = u[id.x]*u[id.x] + v[id.x]*v[id.x];   
+    u2 = u[0 + id.x*2]*u[0 + id.x*2] + u[1 + id.x*2]*u[1 + id.x*2];   
     gx = 0.0; gy = rbetag*(temp[id.x] - 0.5);
     for (int k = 0; k < 9; k++)
     {
-        tmp = cx[k]*u[id.x] + cy[k]*v[id.x];     
+        tmp = cx[k]*u[0 + id.x*2] + cy[k]*u[1 + id.x*2];     
         f0 = wf[k]*rho[id.x]*(1.0 +3.0*tmp +9.0/2.0*tmp*tmp -3.0/2.0*u2);
-        // f[k + (id.x)*9] = f[k + (id.x)*9] - (f[k + (id.x)*9] - f0)/tauf + 3.0*wf[k]*(cx[k]*(gx+px[id.x]) + cy[k]*(gy+py[id.x]));
-        f[k + (id.x)*9] = f[k + (id.x)*9] - (f[k + (id.x)*9] - f0)/tauf + 3.0*wf[k]*(cx[k]*(gx) + cy[k]*(gy));
+        f[k + (id.x)*9] = f[k + (id.x)*9] - (f[k + (id.x)*9] - f0)/tauf + 3.0*wf[k]*(cx[k]*(gx+p[0 + id.x*2]) + cy[k]*(gy+p[1 + id.x*2]));
+        // f[k + (id.x)*9] = f[k + (id.x)*9] - (f[k + (id.x)*9] - f0)/tauf + 3.0*wf[k]*(cx[k]*(gx) + cy[k]*(gy));
         ftmp[k + (id.x)*9] = f[k + (id.x)*9];
         if(k<5)
         {
@@ -141,8 +141,8 @@ void Collision (uint3 id : SV_DispatchThreadID)
             gtmp[k + (id.x)*5] = g[k + (id.x)*5];
         }
     }
-//     px[id.x] = 0.0;
-//     py[id.x] = 0.0;
+    p[0 + id.x*2] = 0.0;
+    p[1 + id.x*2] = 0.0;
 }
 
 [numthreads(64,1,1)]
@@ -324,20 +324,20 @@ void CalculateTempAndSpeed (uint3 id : SV_DispatchThreadID)
 {
     float cx[9] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
     float cy[9] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
-    u[id.x] = 0; v[id.x] = 0;
+    u[0 + id.x*2] = 0; u[1 + id.x*2] = 0;
     rho[id.x] = f[0+(id.x)*9]; 
     temp[id.x] =  g[0+(id.x)*5];
     for(int k = 1; k <= 8; k++)
     {
         rho[id.x] = rho[id.x] + f[k + (id.x)*9];
-        u[id.x] =   u[id.x] + f[k + (id.x)*9]*cx[k];
-        v[id.x] =   v[id.x] + f[k + (id.x)*9]*cy[k];
+        u[0 + id.x*2] =   u[0 + id.x*2] + f[k + (id.x)*9]*cx[k];
+        u[1 + id.x*2] =   u[1 + id.x*2] + f[k + (id.x)*9]*cy[k];
         if(k<5){
         temp[id.x] =   temp[id.x] + g[k + (id.x)*5];}
     } 
-    u[id.x] = u[id.x]/rho[id.x];
-    v[id.x] = v[id.x]/rho[id.x];
-    speed[id.x] = sqrt(u[id.x]*u[id.x] + v[id.x]*v[id.x]);
+    u[0 + id.x*2] = u[0 + id.x*2]/rho[id.x];
+    u[1 + id.x*2] = u[1 + id.x*2]/rho[id.x];
+    speed[id.x] = sqrt(u[0 + id.x*2]*u[0 + id.x*2] + u[1 + id.x*2]*u[1 + id.x*2]);
     
     // minMaxTempAndSpeed[0] = min(minMaxTempAndSpeed[0],temp[id.x]);
     // minMaxTempAndSpeed[1] = max(minMaxTempAndSpeed[1],temp[id.x]);

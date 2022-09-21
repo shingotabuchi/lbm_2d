@@ -35,7 +35,7 @@ public class LBMNatConvThermPartcom : MonoBehaviour
     float[] wg = new float[5]{1f/3f,1f/6f,1f/6f,1f/6f,1f/6f};
     float[] wf = new float[9]{4f/9f,1f/9f,1f/9f,1f/9f,1f/9f,1f/36f,1f/36f,1f/36f,1f/36f};
 
-    float[] rho, u, v, temp,speed,fx,fy;
+    float[] rho, u, temp,speed,p;
     float[] f, f0, ftmp;
     float[] g, g0, gtmp;
 
@@ -84,7 +84,9 @@ public class LBMNatConvThermPartcom : MonoBehaviour
     int threadGroupCount,threadGroupCountDIM_X,threadGroupCountDIM_Y;
     ComputeBuffer rhoComputeBuffer, fComputeBuffer,ftmpComputeBuffer,gComputeBuffer,gtmpComputeBuffer;
     ComputeBuffer uComputeBuffer, vComputeBuffer,tempComputeBuffer,speedComputeBuffer;
-    ComputeBuffer fxComputeBuffer, fyComputeBuffer;
+    ComputeBuffer pComputeBuffer;
+
+    public Color particleColor;
     // Start is called before the first frame update
     void Start()
     {
@@ -116,7 +118,7 @@ public class LBMNatConvThermPartcom : MonoBehaviour
                                                             + new Vector2((spawnPos[i + 0*particleCount]*plotSizeDelta.x)/DIM_X,(spawnPos[i + 1*particleCount]*plotSizeDelta.y)/DIM_Y))*plotScale;
             objs[i].transform.localScale = new Vector3(scale,scale,1);
         }
-        roundParticles = new RoundParticlesForCompute(particleCount,particleDensity,particleRadius,spawnPos,objs,Random.Range(0f,2f*Mathf.PI));
+        roundParticles = new RoundParticlesForCompute(DIM_X,particleCount,particleDensity,particleRadius,spawnPos,objs,Random.Range(0f,2f*Mathf.PI));
 
         kernelInitTempXGradient = computeShader.FindKernel("InitTempXGradient");
         kernelInitTempYGradient = computeShader.FindKernel("InitTempYGradient");
@@ -159,10 +161,8 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         ftmpComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y*9, sizeof(float));
         gComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y*5, sizeof(float));
         gtmpComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y*5, sizeof(float));
-        uComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
-        vComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
-        fxComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
-        fyComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
+        uComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y*2, sizeof(float));
+        pComputeBuffer =  new ComputeBuffer(DIM_X*DIM_Y*2, sizeof(float));
         tempComputeBuffer = new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
         speedComputeBuffer = new ComputeBuffer(DIM_X*DIM_Y, sizeof(float));
         // minMaxTempAndSpeedBuffer = new ComputeBuffer(4, sizeof(float));
@@ -173,9 +173,7 @@ public class LBMNatConvThermPartcom : MonoBehaviour
             computeShader.SetBuffer(kernelInitTempXGradient, "f", fComputeBuffer);
             computeShader.SetBuffer(kernelInitTempXGradient, "g", gComputeBuffer);
             computeShader.SetBuffer(kernelInitTempXGradient, "u", uComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempXGradient, "v", vComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempXGradient, "px", fxComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempXGradient, "py", fyComputeBuffer);
+            computeShader.SetBuffer(kernelInitTempXGradient, "p", pComputeBuffer);
             computeShader.SetBuffer(kernelInitTempXGradient, "temp", tempComputeBuffer);
             computeShader.SetBuffer(kernelInitTempXGradient, "speed", speedComputeBuffer);
             computeShader.Dispatch(kernelInitTempXGradient, threadGroupCount, 1, 1);
@@ -186,11 +184,9 @@ public class LBMNatConvThermPartcom : MonoBehaviour
             computeShader.SetBuffer(kernelInitTempYGradient, "f", fComputeBuffer);
             computeShader.SetBuffer(kernelInitTempYGradient, "g", gComputeBuffer);
             computeShader.SetBuffer(kernelInitTempYGradient, "u", uComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempYGradient, "v", vComputeBuffer);
             computeShader.SetBuffer(kernelInitTempYGradient, "temp", tempComputeBuffer);
             computeShader.SetBuffer(kernelInitTempYGradient, "speed", speedComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempYGradient, "px", fxComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempYGradient, "py", fyComputeBuffer);
+            computeShader.SetBuffer(kernelInitTempYGradient, "p", pComputeBuffer);
             computeShader.Dispatch(kernelInitTempYGradient, threadGroupCount, 1, 1);
         }
         if(initTemp == InitialTemperatureDistribution.AllZero)
@@ -199,11 +195,9 @@ public class LBMNatConvThermPartcom : MonoBehaviour
             computeShader.SetBuffer(kernelInitTempAllZero, "f", fComputeBuffer);
             computeShader.SetBuffer(kernelInitTempAllZero, "g", gComputeBuffer);
             computeShader.SetBuffer(kernelInitTempAllZero, "u", uComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempAllZero, "v", vComputeBuffer);
             computeShader.SetBuffer(kernelInitTempAllZero, "temp", tempComputeBuffer);
             computeShader.SetBuffer(kernelInitTempAllZero, "speed", speedComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempAllZero, "px", fxComputeBuffer);
-            computeShader.SetBuffer(kernelInitTempAllZero, "py", fyComputeBuffer);
+            computeShader.SetBuffer(kernelInitTempAllZero, "p", pComputeBuffer);
             computeShader.Dispatch(kernelInitTempAllZero, threadGroupCount, 1, 1);
         }
         
@@ -213,10 +207,8 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         computeShader.SetBuffer(kernelCollision, "g", gComputeBuffer);
         computeShader.SetBuffer(kernelCollision, "gtmp", gtmpComputeBuffer);
         computeShader.SetBuffer(kernelCollision, "u", uComputeBuffer);
-        computeShader.SetBuffer(kernelCollision, "v", vComputeBuffer);
         computeShader.SetBuffer(kernelCollision, "temp", tempComputeBuffer);
-        computeShader.SetBuffer(kernelCollision, "px", fxComputeBuffer);
-        computeShader.SetBuffer(kernelCollision, "py", fyComputeBuffer);
+        computeShader.SetBuffer(kernelCollision, "p", pComputeBuffer);
 
         computeShader.SetBuffer(kernelStreaming, "f", fComputeBuffer);
         computeShader.SetBuffer(kernelStreaming, "ftmp", ftmpComputeBuffer);
@@ -242,7 +234,6 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         computeShader.SetBuffer(kernelAdiabaticConstantBoundaryY, "g", gComputeBuffer);
 
         computeShader.SetBuffer(kernelCalculateTempAndSpeed, "u", uComputeBuffer);
-        computeShader.SetBuffer(kernelCalculateTempAndSpeed, "v", vComputeBuffer);
         computeShader.SetBuffer(kernelCalculateTempAndSpeed, "rho", rhoComputeBuffer);
         computeShader.SetBuffer(kernelCalculateTempAndSpeed, "temp", tempComputeBuffer);
         computeShader.SetBuffer(kernelCalculateTempAndSpeed, "f", fComputeBuffer);
@@ -250,24 +241,15 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         computeShader.SetBuffer(kernelCalculateTempAndSpeed, "speed", speedComputeBuffer);
 
         speed = new float[DIM_X*DIM_Y];
-        u = new float[DIM_X*DIM_Y];
-        v = new float[DIM_X*DIM_Y];
-        fx = new float[DIM_X*DIM_Y];
-        fy = new float[DIM_X*DIM_Y];
-        for (int i = 0; i < DIM_X; i++)
-        {
-            for (int j = 0; j < DIM_Y; j++)
-            {
-                fx[i + j*DIM_X] = 0f;
-                fy[i + j*DIM_X] = 0f;
-            }
-        }
+        u = new float[DIM_X*DIM_Y*2];
+        p = new float[DIM_X*DIM_Y*2];
         temp = new float[DIM_X*DIM_Y];
     }
 
     void LBMStep()
     {
-        // fxComputeBuffer.SetData(fx);
+        pComputeBuffer.SetData(p);
+        tempComputeBuffer.SetData(temp);
         // fyComputeBuffer.SetData(fy);
         computeShader.Dispatch(kernelCollision, threadGroupCount, 1, 1);
         computeShader.Dispatch(kernelStreaming, threadGroupCount, 1, 1);
@@ -293,11 +275,11 @@ public class LBMNatConvThermPartcom : MonoBehaviour
 
 
         computeShader.Dispatch(kernelCalculateTempAndSpeed,threadGroupCount,1,1);
+        tempComputeBuffer.GetData(temp);
         uComputeBuffer.GetData(u);
-        vComputeBuffer.GetData(v);
-        // fxComputeBuffer.GetData(fx);
+        pComputeBuffer.GetData(p);
         // fyComputeBuffer.GetData(fy);
-        // ImmersedBoundary();
+        ImmersedBoundary();
     }
 
     // Update is called once per frame
@@ -317,7 +299,6 @@ public class LBMNatConvThermPartcom : MonoBehaviour
     void UpdatePlot()
     {
         speedComputeBuffer.GetData(speed);
-        tempComputeBuffer.GetData(temp);
         maxSpeed = 0f;
         minSpeed = Mathf.Infinity;
         maxTemp = 0f;
@@ -348,15 +329,17 @@ public class LBMNatConvThermPartcom : MonoBehaviour
                 plotPixels[i] = colorHeatMap.GetColorForValue(temp[i%DIM_X+(i/DIM_X)*DIM_X],maxTemp);
             }
         }
-        // for (int i = 0; i < particleCount; i++)
-        // {
-        //     roundParticles[i].obj.GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
-        //                                                                         + new Vector2((roundParticles[i].pos[0]*plotSizeDelta.x)/DIM_X,(roundParticles[i].pos[1]*plotSizeDelta.y)/DIM_Y))*plotScale;
-        //     roundParticles[i].obj.transform.rotation = Quaternion.Euler(0,0,((roundParticles[i].theta*180f)/Mathf.PI));
-        // }
+        for (int i = 0; i < particleCount; i++)
+        {
+            // roundParticles.PlotParticlePerimeter(ref plotPixels, particleColor);
+            // roundParticles.PlotParticleFill(ref plotPixels);
+            roundParticles.objs[i].GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
+                                                                                + new Vector2((roundParticles.pos[i + 0*particleCount]*plotSizeDelta.x)/DIM_X,(roundParticles.pos[i + 1*particleCount]*plotSizeDelta.y)/DIM_Y))*plotScale;
+            roundParticles.objs[i].transform.rotation = Quaternion.Euler(0,0,((roundParticles.theta[i]*180f)/Mathf.PI));
+        }
         plotTexture.SetPixels(plotPixels);
         plotTexture.Apply();
-        vectorField.UpdateVectors(u,v,DIM_Y,maxSpeed);
+        vectorField.UpdateVectors(u,DIM_Y,maxSpeed);
     }
 
     void ImmersedBoundary()
@@ -366,16 +349,17 @@ public class LBMNatConvThermPartcom : MonoBehaviour
         { 
             roundParticles.forceFromCollisions[n + 0*particleCount] = 0f;
             roundParticles.forceFromCollisions[n + 1*particleCount] = 0f;
-
             for (int k = 0; k < particleCount; k++)
             {
                 if(k==n) continue;
+                float dist = roundParticles.ParticleDistance(n,k);
+                // print(dist);
                 for (int i = 0; i < 2; i++)
                 {
-                    tmp1 = roundParticles.ParticleDistance(n,k);
-                    if(tmp1 < 2.0f*roundParticles.radius[n] + zeta)
+                    if(dist < 2.0f*roundParticles.radius[n] + zeta)
                     {
-                        roundParticles.forceFromCollisions[n + i*particleCount] += (roundParticles.pos[n + i*particleCount] - roundParticles.pos[k + i*particleCount])*(2.0f*roundParticles.radius[n] - tmp1 + zeta)*(2.0f*roundParticles.radius[n] - tmp1 + zeta)/epsw;
+                        roundParticles.forceFromCollisions[n + i*particleCount] += (roundParticles.pos[n + i*particleCount] - roundParticles.pos[k + i*particleCount])*(2.0f*roundParticles.radius[n] - dist + zeta)*(2.0f*roundParticles.radius[n] - dist + zeta)/epsw;
+                        print(roundParticles.forceFromCollisions[n + i*particleCount]);
                     }
                 }
             }
@@ -435,8 +419,8 @@ public class LBMNatConvThermPartcom : MonoBehaviour
                         }
                         if((j<DIM_Y&&j>=0) && (i<DIM_X&&i>=0))
                         {
-                            roundParticles.perimeterFluidVel[n + (m + 0*roundParticles.maxPerimeterPointCount)*particleCount] += u[i + j*DIM_X]*tmp3;
-                            roundParticles.perimeterFluidVel[n + (m + 1*roundParticles.maxPerimeterPointCount)*particleCount] += v[i + j*DIM_X]*tmp3;
+                            roundParticles.perimeterFluidVel[n + (m + 0*roundParticles.maxPerimeterPointCount)*particleCount] += u[0 + (i + j*DIM_X)*2]*tmp3;
+                            roundParticles.perimeterFluidVel[n + (m + 1*roundParticles.maxPerimeterPointCount)*particleCount] += u[1 + (i + j*DIM_X)*2]*tmp3;
                         }
                     } 
                 }
@@ -468,8 +452,8 @@ public class LBMNatConvThermPartcom : MonoBehaviour
                         }
                         if((j<DIM_Y&&j>=0) && (i<DIM_X&&i>=0))
                         {
-                            fx[i + j*DIM_X] += roundParticles.forceOnPerimeter[n + (m + 0*roundParticles.maxPerimeterPointCount)*particleCount] * tmp3 * 2.0f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];
-                            fy[i + j*DIM_X] += roundParticles.forceOnPerimeter[n + (m + 1*roundParticles.maxPerimeterPointCount)*particleCount] * tmp3 * 2.0f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];
+                            p[0 + (i + j*DIM_X)*2] += roundParticles.forceOnPerimeter[n + (m + 0*roundParticles.maxPerimeterPointCount)*particleCount] * tmp3 * 2.0f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];
+                            p[1 + (i + j*DIM_X)*2] += roundParticles.forceOnPerimeter[n + (m + 1*roundParticles.maxPerimeterPointCount)*particleCount] * tmp3 * 2.0f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];
                         }
                     } 
                 }
@@ -482,10 +466,48 @@ public class LBMNatConvThermPartcom : MonoBehaviour
             roundParticles.forceFromFluid[n + 0*particleCount] *= -2f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];  
             roundParticles.forceFromFluid[n + 1*particleCount] *= -2f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];  
             roundParticles.torque[n] *= -2f*Mathf.PI*roundParticles.radius[n]/(float)roundParticles.perimeterPointCount[n];  
-
-            roundParticles.UpdatePosVel(gravity);
-            roundParticles.UpdateOmegaTheta();
-            roundParticles.UpdatePerimeter();
+            roundParticles.UpdatePosVel(n,gravity);
+            roundParticles.UpdateOmegaTheta(n);
+            roundParticles.UpdatePerimeter(n);
         }
+        // HashSet<string> searchedPairs = new HashSet<string>();
+        // for (int n = 0; n < particleCount; n++)
+        // {
+        //     for (int k = 0; k < particleCount; k++)
+        //     {
+        //         if(n==k)continue;
+        //         string pairstring1 = n.ToString() + ":" + k.ToString();
+        //         string pairstring2 = k.ToString() + ":" + n.ToString();
+        //         if(searchedPairs.Contains(pairstring1)) continue;
+        //         searchedPairs.Add(pairstring1);
+        //         searchedPairs.Add(pairstring2);
+
+        //         float dist = roundParticles.ParticleDistance(n,k);
+        //         if(dist >= roundParticles.radius[n]*2f) continue;
+
+        //         Vector2 relVel = new Vector2(roundParticles.vel[k + 0*particleCount] - roundParticles.vel[n + 0*particleCount],roundParticles.vel[k + 1*particleCount] - roundParticles.vel[n + 1*particleCount]);
+        //         Vector2 unitVecn2k = new Vector2(roundParticles.pos[k + 0*particleCount] - roundParticles.pos[n + 0*particleCount],roundParticles.pos[k + 1*particleCount] - roundParticles.pos[n + 1*particleCount]);
+        //         unitVecn2k.Normalize();
+        //         float naiseki =  relVel.x * unitVecn2k.x + relVel.y * unitVecn2k.y;
+        //         Vector2 forceVecn2k = unitVecn2k * Mathf.Abs(naiseki);
+
+        //         roundParticles.vel[k + 0*particleCount] += forceVecn2k.x;
+        //         roundParticles.vel[k + 1*particleCount] += forceVecn2k.y;
+
+        //         roundParticles.vel[n + 0*particleCount] -= forceVecn2k.x;
+        //         roundParticles.vel[n + 1*particleCount] -= forceVecn2k.y;
+
+        //         roundParticles.vel[k + 0*particleCount] += unitVecn2k.x * dist/2f;
+        //         roundParticles.vel[k + 1*particleCount] += unitVecn2k.y * dist/2f;
+
+        //         roundParticles.vel[n + 0*particleCount] -= unitVecn2k.x * dist/2f;
+        //         roundParticles.vel[n + 1*particleCount] -= unitVecn2k.y * dist/2f;
+
+        //         roundParticles.UpdatePosVelCollision(n);
+        //         roundParticles.UpdatePosVelCollision(k);
+        //         roundParticles.UpdatePerimeter(n);
+        //         roundParticles.UpdatePerimeter(k);
+        //     }
+        // }
     }
 }

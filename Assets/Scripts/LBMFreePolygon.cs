@@ -153,7 +153,7 @@ public class LBMFreePolygon : MonoBehaviour
             LBMStep();
         }
         UpdatePlot();
-        pTheta = polygonParticle.theta;
+        // pTheta = polygonParticle.theta;
     }
     public void OnSliderChange()
     {
@@ -483,7 +483,7 @@ public class LBMFreePolygon : MonoBehaviour
         if(falling) polygonParticle.UpdatePosVel(new float[2]{gx,gy});
         else polygonParticle.UpdatePosVel();
         polygonParticle.UpdateOmegaTheta();
-        // polygonParticle.theta = pTheta * Mathf.PI;
+        polygonParticle.theta = pTheta * Mathf.PI;
         UpdatePolygonPerimeter();
     }
     void UpdatePolygonPerimeter()

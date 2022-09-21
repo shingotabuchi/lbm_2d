@@ -66,94 +66,7 @@ public class RectObstacle
         return true;
     }
 }
-public class ParticlesForCompute
-{
-    public int particleCount;
-    public int DIM_X;
-    public GameObject[] objs;
-    public float[] density;
-    public float[] omega;//角速度
-    public float[] theta;//角
-    public float[] prevOmega1;//前フレームの角速度
-    public float[] prevOmega2;//前々フレームの角速度
-    public float[] torque;
-    public float[] pos = new float[2];
-    public float[] vel = new float[2];
-    public float[] prevVel1 = new float[2];//前フレームの速度
-    public float[] prevVel2 = new float[2];//前々フレームの速度
-    public float[] forceFromCollisions = new float[2];
-    public float[] forceFromFluid = new float[2];
-    public float[] perimeterPos;
-    public float[] perimeterVel;
-    public float[] perimeterFluidVel;
-    public float[] forceOnPerimeter;
-    public int[] perimeterPointCount;
-    public float[] volume;
-    public float[] mass;
-    public float[] momentOfInertia;
 
-    public void PlotParticlePerimeter(ref Color[] pixels, Color? color = null)
-    {
-        color ??= Color.white;
-        for (int n = 0; n < particleCount; n++)
-        {
-            for(int i = 0; i < perimeterPointCount[n]; i++) 
-            {
-                if(
-                    (int)perimeterPos[n + (i + 0*DIM_X)*particleCount] + (int)perimeterPos[n + (i + 1*DIM_X)*particleCount] * DIM_X < pixels.Length
-                    &&  
-                    (int)perimeterPos[n + (i + 0*DIM_X)*particleCount] + (int)perimeterPos[n + (i + 1*DIM_X)*particleCount] * DIM_X >= 0
-                )
-                pixels[(int)perimeterPos[n + (i + 0*DIM_X)*particleCount] + (int)perimeterPos[n + (i + 1*DIM_X)*particleCount] * DIM_X] = (Color)color;
-            }
-        }
-    }
-    public void PlotParticleTrace(ref Color[] pixels, Color? color = null)
-    {
-        color ??= Color.white;
-        for (int n = 0; n < particleCount; n++)
-        {
-            for(int i = 0; i < perimeterPointCount[n] ; i++) 
-            {
-                if(
-                    (int)perimeterPos[n + (i + 0*DIM_X)*particleCount] + (int)perimeterPos[n + (i + 1*DIM_X)*particleCount] * DIM_X < pixels.Length
-                    &&  
-                    (int)perimeterPos[n + (i + 0*DIM_X)*particleCount] + (int)perimeterPos[n + (i + 1*DIM_X)*particleCount] * DIM_X >= 0
-                )
-                pixels[(int)perimeterPos[n + (i + 0*DIM_X)*particleCount] + (int)perimeterPos[n + (i + 1*DIM_X)*particleCount] * DIM_X] = (Color)color;
-            }
-        }
-    }
-    public void UpdatePosVel(float[]? gravity = null)
-    {
-        gravity ??= new float[2]{0f,0f};
-        for (int n = 0; n < particleCount; n++)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                vel[n + i*particleCount] = (1f + 1f/density[n]) * prevVel1[n + i*particleCount]
-                                        - 1f/density[n] * prevVel2[n + i*particleCount]
-                                        + (forceFromFluid[n + i*particleCount] + forceFromCollisions[n + i*particleCount])/mass[n]
-                                        + (1f - 1f/density[n]) * (float)gravity[i];
-                pos[n + i*particleCount] += (vel[n + i*particleCount] + prevVel1[n + i*particleCount])/2f;
-                prevVel2[n + i*particleCount] = prevVel1[n + i*particleCount];
-                prevVel1[n + i*particleCount] = vel[n + i*particleCount];
-            }
-        }
-    }
-    public void UpdateOmegaTheta()
-    {
-        for (int n = 0; n < particleCount; n++)
-        {
-            omega[n] = (1f + 1f/density[n]) * prevOmega1[n] 
-                                    - 1f/density[n] * prevOmega2[n]
-                                    + torque[n]/momentOfInertia[n];
-            theta[n] += (omega[n] - prevOmega1[n])/2f;
-            prevOmega2[n] = prevOmega1[n];
-            prevOmega1[n] = omega[n];
-        } 
-    }
-}
 public class Particle
 {
     public GameObject obj;
@@ -223,7 +136,7 @@ public class Particle
         omega = (1f + 1f/density) * prevOmega1 
                                 - 1f/density * prevOmega2
                                 + torque/momentOfInertia;
-        theta += (omega - prevOmega1)/2f;
+        theta += (omega + prevOmega1)/2f;
         prevOmega2 = prevOmega1;
         prevOmega1 = omega;
     }
@@ -252,7 +165,8 @@ public class PolygonParticle : Particle
         volume = _area;
         density = _density;
         mass = volume * density;
-        // momentOfInertia = (volume*volume/Mathf.PI)* _density/2f;
+        momentOfInertia = (volume*volume/Mathf.PI)* _density/2f;
+        // Debug.Log(momentOfInertia);
         momentOfInertia = 5100f;
         if(_initPos==null) pos = new float[2]{0f,0f};
         else pos = (float[])_initPos;
@@ -279,13 +193,133 @@ public class PolygonParticle : Particle
     {
     }
 }
+public class ParticlesForCompute
+{
+    public int particleCount;
+    public int DIM_X;
+    public GameObject[] objs;
+    public float[] density;
+    public float[] omega;//角速度
+    public float[] theta;//角
+    public float[] prevOmega1;//前フレームの角速度
+    public float[] prevOmega2;//前々フレームの角速度
+    public float[] torque;
+    public float[] pos = new float[2];
+    public float[] vel = new float[2];
+    public float[] prevVel1 = new float[2];//前フレームの速度
+    public float[] prevVel2 = new float[2];//前々フレームの速度
+    public float[] forceFromCollisions = new float[2];
+    public float[] forceFromFluid = new float[2];
+    public float[] perimeterPos;
+    public float[] perimeterVel;
+    public float[] perimeterFluidVel;
+    public float[] forceOnPerimeter;
+    public int[] perimeterPointCount;
+    public float[] volume;
+    public float[] mass;
+    public float[] momentOfInertia;
+    public int maxPerimeterPointCount = 0;
+
+    public void PlotParticlePerimeter(ref Color[] pixels, Color? color = null)
+    {
+        color ??= Color.white;
+        for (int n = 0; n < particleCount; n++)
+        {
+            for(int i = 0; i < perimeterPointCount[n]; i++) 
+            {
+                int pixelIndex = (int)perimeterPos[n + (i + 0*maxPerimeterPointCount)*particleCount] + (int)perimeterPos[n + (i + 1*maxPerimeterPointCount)*particleCount] * DIM_X;
+                if(
+                    pixelIndex < pixels.Length
+                    &&  
+                    pixelIndex >= 0
+                )
+                pixels[pixelIndex] = (Color)color;
+            }
+        }
+    }
+    public void PlotParticleTrace(ref Color[] pixels, Color? color = null)
+    {
+        color ??= Color.white;
+        for (int n = 0; n < particleCount; n++)
+        {
+            for(int i = 0; i < perimeterPointCount[n] ; i++) 
+            {
+                if(
+                    (int)perimeterPos[n + (i + 0*maxPerimeterPointCount)*particleCount] + (int)perimeterPos[n + (i + 1*maxPerimeterPointCount)*particleCount] * DIM_X < pixels.Length
+                    &&  
+                    (int)perimeterPos[n + (i + 0*maxPerimeterPointCount)*particleCount] + (int)perimeterPos[n + (i + 1*maxPerimeterPointCount)*particleCount] * DIM_X >= 0
+                )
+                pixels[(int)perimeterPos[n + (i + 0*maxPerimeterPointCount)*particleCount] + (int)perimeterPos[n + (i + 1*maxPerimeterPointCount)*particleCount] * DIM_X] = (Color)color;
+            }
+        }
+    }
+    public void UpdatePosVel(float[]? gravity = null)
+    {
+        gravity ??= new float[2]{0f,0f};
+        for (int n = 0; n < particleCount; n++)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                vel[n + i*particleCount] = (1f + 1f/density[n]) * prevVel1[n + i*particleCount]
+                                        - 1f/density[n] * prevVel2[n + i*particleCount]
+                                        + (forceFromFluid[n + i*particleCount] + forceFromCollisions[n + i*particleCount])/mass[n]
+                                        + (1f - 1f/density[n]) * (float)gravity[i];
+                pos[n + i*particleCount] += (vel[n + i*particleCount] + prevVel1[n + i*particleCount])/2f;
+                prevVel2[n + i*particleCount] = prevVel1[n + i*particleCount];
+                prevVel1[n + i*particleCount] = vel[n + i*particleCount];
+            }
+        }
+    }
+    public void UpdatePosVel(int n,float[]? gravity = null)
+    {
+        gravity ??= new float[2]{0f,0f};
+        for (int i = 0; i < 2; i++)
+        {
+            vel[n + i*particleCount] = (1f + 1f/density[n]) * prevVel1[n + i*particleCount]
+                                    - 1f/density[n] * prevVel2[n + i*particleCount]
+                                    + (forceFromFluid[n + i*particleCount] + forceFromCollisions[n + i*particleCount])/mass[n]
+                                    + (1f - 1f/density[n]) * (float)gravity[i];
+            pos[n + i*particleCount] += (vel[n + i*particleCount] + prevVel1[n + i*particleCount])/2f;
+            prevVel2[n + i*particleCount] = prevVel1[n + i*particleCount];
+            prevVel1[n + i*particleCount] = vel[n + i*particleCount];
+        }
+    }
+    public void UpdatePosVelCollision(int n)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            prevVel1[n + i*particleCount] = vel[n + i*particleCount];
+        }
+    }
+    public void UpdateOmegaTheta()
+    {
+        for (int n = 0; n < particleCount; n++)
+        {
+            omega[n] = (1f + 1f/density[n]) * prevOmega1[n] 
+                                    - 1f/density[n] * prevOmega2[n]
+                                    + torque[n]/momentOfInertia[n];
+            theta[n] += (omega[n] + prevOmega1[n])/2f;
+            prevOmega2[n] = prevOmega1[n];
+            prevOmega1[n] = omega[n];
+        } 
+    }
+    public void UpdateOmegaTheta(int n)
+    {
+        omega[n] = (1f + 1f/density[n]) * prevOmega1[n] 
+                                - 1f/density[n] * prevOmega2[n]
+                                + torque[n]/momentOfInertia[n];
+        theta[n] += (omega[n] + prevOmega1[n])/2f;
+        prevOmega2[n] = prevOmega1[n];
+        prevOmega1[n] = omega[n];
+    }
+}
 public class RoundParticlesForCompute : ParticlesForCompute
 {
     public float[] radius;
-    public int maxPerimeterPointCount = 0;
     // public RoundParticlesForCompute(int _particleCount,float _density,float _radius,float[] _initPos, float _initTheta = 0f)
-    public RoundParticlesForCompute(int _particleCount,float _density,float _radius,float[] _initPos,GameObject[] _objs, float _initTheta = 0f)
+    public RoundParticlesForCompute(int _DIM_X,int _particleCount,float _density,float _radius,float[] _initPos,GameObject[] _objs, float _initTheta = 0f)
     {
+        DIM_X = _DIM_X;
         particleCount = _particleCount;
         density = new float[particleCount];
         radius = new float[particleCount];
@@ -392,6 +426,17 @@ public class RoundParticlesForCompute : ParticlesForCompute
                 perimeterVel[n + (i + 1*maxPerimeterPointCount)*particleCount] = vel[n + 1*particleCount] + omega[n]*(perimeterPos[n + (i + 0*maxPerimeterPointCount)*particleCount] - pos[n + 0*particleCount]);
             } 
         }
+    }
+    public void UpdatePerimeter(int n)
+    {
+        for(int i = 0; i < perimeterPointCount[n]; i++) 
+        {
+            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount[n] + theta[n];
+            perimeterPos[n + (i + 0*maxPerimeterPointCount)*particleCount] = pos[n + 0*particleCount] + radius[n] * Mathf.Cos(angle);
+            perimeterPos[n + (i + 1*maxPerimeterPointCount)*particleCount] = pos[n + 1*particleCount] + radius[n] * Mathf.Sin(angle);
+            perimeterVel[n + (i + 0*maxPerimeterPointCount)*particleCount] = vel[n + 0*particleCount] - omega[n]*(perimeterPos[n + (i + 1*maxPerimeterPointCount)*particleCount] - pos[n + 1*particleCount]);
+            perimeterVel[n + (i + 1*maxPerimeterPointCount)*particleCount] = vel[n + 1*particleCount] + omega[n]*(perimeterPos[n + (i + 0*maxPerimeterPointCount)*particleCount] - pos[n + 0*particleCount]);
+        } 
     }
 
     public float ParticleDistance(int a, int b)
