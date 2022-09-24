@@ -450,7 +450,7 @@ MonoBehaviour:
   particleCount: 5
   particleDensity: 1.001
   particleRadius: 2
-  zeta: 3
+  zeta: 0.1
   epsw: 10
   beta: 0.01
   initTemp: 0

@@ -197,8 +197,12 @@ public class LBMCage : MonoBehaviour
     void UpdatePlot()
     {
         if(maxSpeed == 0f) maxSpeed = 1f;
+        // else Debug.Log(maxSpeed);
         for (int i = 0; i < plotPixels.Length; i++)
         {
+            // float c = speed[i%DIM,i/DIM]/maxSpeed;
+            // plotPixels[i] = new Color(c,c,c,1);
+            // if(speed[i%DIM,i/DIM]!=0f)Debug.Log(speed[i%DIM,i/DIM]);
             if(mode == HeatMapMode.Speed)
             {
                 plotPixels[i] = colorHeatMap.GetColorForValue(speed[i%DIM,i/DIM],maxSpeed);

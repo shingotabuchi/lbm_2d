@@ -380,6 +380,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1328213432}
   - component: {fileID: 1328213433}
+  - component: {fileID: 1328213431}
   m_Layer: 0
   m_Name: Main
   m_TagString: Untagged
@@ -387,6 +388,49 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &1328213431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1328213430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79ab892e4dc033741ad2bb145a8285e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  plotImage: {fileID: 525211097}
+  vectorField: {fileID: 1342449317}
+  mode: 2
+  wallboundaries: 01000000010000000100000001000000
+  wallTemp1: 1
+  wallTemp2: 0
+  wallTemp3: 0
+  wallTemp4: 0
+  normalizeHeatMap: 1
+  DIM_X: 32
+  DIM_Y: 32
+  maxTemp: 0
+  minTemp: 0
+  maxSpeed: 0
+  minSpeed: 0
+  maxRho: 0
+  minRho: 0
+  pr: 0.71
+  ra: 10000
+  tauf: 0.8
+  particleCount: 5
+  particleDensity: 1.001
+  particleRadius: 2
+  zeta: 0.1
+  epsw: 10
+  beta: 0.01
+  initTemp: 0
+  particlePrefab: {fileID: 5967441514033678248, guid: 85aac0deefb57984d829fb175e5e2fd3, type: 3}
+  particleParent: {fileID: 691147932}
+  particleTemp: 1
+  loopCount: 12
 --- !u!4 &1328213432
 Transform:
   m_ObjectHideFlags: 0
@@ -408,7 +452,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1328213430}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 174d0b509b0c8744ab88d3114cb32be9, type: 3}
   m_Name: 
@@ -433,11 +477,11 @@ MonoBehaviour:
   pr: 0.71
   ra: 10000
   tauf: 0.8
-  loopCount: 12
-  particleCount: 5
+  loopCount: 60
+  particleCount: 1
   particleDensity: 1.001
   particleRadius: 2
-  zeta: 3
+  zeta: 0.1
   epsw: 10
   beta: 0.01
   initTemp: 0

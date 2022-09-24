@@ -49,8 +49,10 @@ public class LBMFreePolygon : MonoBehaviour
 
     public int lineRes = 50;
     public int modes = 4;
-    public float[] modeCoeffs = new float[4];
-    public float[] modeSinCoeffs = new float[4];
+    public float[] modeCoeffs = new float[5];
+    public float[] modeSinCoeffs = new float[5];
+    float[] originalModeCoeffs = new float[5];
+    float[] originalModeSinCoeffs = new float[5];
     public float area = 1000f;
     public float realArea;
     public int dotCount = 10;
@@ -60,6 +62,9 @@ public class LBMFreePolygon : MonoBehaviour
     public Transform canvas;
     public Color perimColor;
     public Color traceColor;
+    public float shuuki;
+    public int time = 0;
+    public bool shindo = true;
 
     PolygonParticle polygonParticle;
 
@@ -129,31 +134,52 @@ public class LBMFreePolygon : MonoBehaviour
                 maxRho = Mathf.Min(maxRho,rho[i,j]);
             }
         }
-
+        for (int i = 0; i < modeCoeffs.Length; i++)
+        {
+            originalModeCoeffs[i]  = modeCoeffs[i];
+        }
+        for (int i = 0; i < modeSinCoeffs.Length; i++)
+        {
+            originalModeSinCoeffs[i]  = modeSinCoeffs[i];
+        }
         // polygonParticle = new RoundParticle(particleDensity,particleRadius,particleInitPos);
         DrawLine(true);
     }
 
     void LBMStep()
     {
+        if(shindo)
+        {
+            for (int i = 1; i < modeCoeffs.Length; i++)
+            {
+                modeCoeffs[i] = originalModeCoeffs[i] * Mathf.Cos(2f*Mathf.PI*((float)time/shuuki));
+            }
+            for (int i = 1; i < modeSinCoeffs.Length; i++)
+            {
+                modeSinCoeffs[i] = originalModeSinCoeffs[i] * Mathf.Cos(2f*Mathf.PI*((float)time/shuuki));
+            }
+        }
         if(rectObs.h != H) rectObs.h = H;
         if(rectObs.w != W) rectObs.w = W;
         Collision();
         Streaming();
         BounceBackBoundaries();
         UpdateSpeedAndDensity();
+        
         ImmersedBoundary();
+        time++;
     }
 
     // Update is called once per frame
     void Update()
     {
+        // polygonParticle.theta = pTheta;
         for (int i = 0; i < loopCount; i++)
         {
             LBMStep();
         }
         UpdatePlot();
-        // pTheta = polygonParticle.theta;
+        pTheta = polygonParticle.theta;
     }
     public void OnSliderChange()
     {
@@ -192,6 +218,9 @@ public class LBMFreePolygon : MonoBehaviour
         {
             for (int j = 0; j < 2; j++)
             {
+                if((int)polygonParticle.pos[0]+i + (int)(polygonParticle.pos[1]+j)*tracePlotTexture.width < tracePlotPixels.Length
+                && (int)polygonParticle.pos[0]+i + (int)(polygonParticle.pos[1]+j)*tracePlotTexture.width >= 0
+                )
                 tracePlotPixels[(int)polygonParticle.pos[0]+i + (int)(polygonParticle.pos[1]+j)*tracePlotTexture.width] = traceColor;
             }
         }
@@ -483,7 +512,7 @@ public class LBMFreePolygon : MonoBehaviour
         if(falling) polygonParticle.UpdatePosVel(new float[2]{gx,gy});
         else polygonParticle.UpdatePosVel();
         polygonParticle.UpdateOmegaTheta();
-        polygonParticle.theta = pTheta * Mathf.PI;
+        // polygonParticle.theta = pTheta * Mathf.PI;
         UpdatePolygonPerimeter();
     }
     void UpdatePolygonPerimeter()
@@ -494,7 +523,7 @@ public class LBMFreePolygon : MonoBehaviour
         float scale;
         float sqrdSum = 0f;
         float polygonTheta = 0f;
-        polygonTheta = -polygonParticle.theta;
+        polygonTheta = polygonParticle.theta;
         for (int i = 0; i < lineRes; i++)
         {
             float currentRadian = radianProgressPerStep*i;
@@ -514,6 +543,7 @@ public class LBMFreePolygon : MonoBehaviour
         float dtheta,r;
         int spawnedDots = 0;
         Vector3 spawnPos;
+        List<float> thetaList = new List<float>();
         while (theta <= 2*Mathf.PI)
         {
             r = 0f;
@@ -529,6 +559,7 @@ public class LBMFreePolygon : MonoBehaviour
             }
             spawnPos = new Vector3(Mathf.Cos((theta+polygonTheta)), Mathf.Sin((theta+polygonTheta)),0);
             spawnPos *= r;
+            thetaList.Add(theta);
             if(dotPositions.Count < spawnedDots + 1)
             {
                 dotPositions.Add(spawnPos);
@@ -544,13 +575,17 @@ public class LBMFreePolygon : MonoBehaviour
         }
         if(spawnedDots<dotPositions.Count)
         {
-            for (int i = 0; i < dotPositions.Count - spawnedDots; i++)
+            int a = dotPositions.Count;
+            for (int i = 0; i < a - spawnedDots; i++)
             {
                 dotPositions.RemoveAt(dotPositions.Count-1);
             }
         }
         polygonParticle.perimeterPointCount =  dotPositions.Count;
         polygonParticle.perimeterPos = new float[polygonParticle.perimeterPointCount,2];
+        polygonParticle.forceOnPerimeter = new float[polygonParticle.perimeterPointCount,2];
+        polygonParticle.perimeterFluidVel = new float[polygonParticle.perimeterPointCount,2];
+        polygonParticle.perimeterVel = new float[polygonParticle.perimeterPointCount,2];
         for (int i = 0; i < polygonParticle.perimeterPointCount; i++)
         {
             float newposx = dotPositions[i].x/canvas.localScale.x;
@@ -561,8 +596,22 @@ public class LBMFreePolygon : MonoBehaviour
             polygonParticle.perimeterPos[i,1] = polygonParticle.pos[1] + newposy;
             polygonParticle.perimeterVel[i,0] = polygonParticle.vel[0] - polygonParticle.omega*(polygonParticle.perimeterPos[i,1] - polygonParticle.pos[1]);
             polygonParticle.perimeterVel[i,1] = polygonParticle.vel[1] + polygonParticle.omega*(polygonParticle.perimeterPos[i,0] - polygonParticle.pos[0]);
+            if(shindo)
+            {
+                Vector2 newPosVec = new Vector2(newposx, newposy);
+                newPosVec.Normalize();
+                for (int j = 1; j < modes; j++)
+                {
+                    polygonParticle.perimeterVel[i,0] += scale*newPosVec[0] * (-originalModeCoeffs[j]*(2f*Mathf.PI/shuuki)*Mathf.Sin(2f*Mathf.PI*((float)time/shuuki))) * Mathf.Cos(j*(thetaList[i]));
+                    polygonParticle.perimeterVel[i,1] += scale*newPosVec[1] * (-originalModeSinCoeffs[j]*(2f*Mathf.PI/shuuki)*Mathf.Sin(2f*Mathf.PI*((float)time/shuuki))) * Mathf.Sin(j*(thetaList[i]));
+                }
+            }
         }
     }
+
+
+
+
     void DrawLine(bool initParticle = false)
     {
         List<Vector3> points = new List<Vector3>();
@@ -573,7 +622,7 @@ public class LBMFreePolygon : MonoBehaviour
         float sqrdSum = 0f;
         float polygonTheta = 0f;
         if(initParticle) polygonTheta = 0f;
-        else polygonTheta = -polygonParticle.theta;
+        else polygonTheta = polygonParticle.theta;
         for (int i = 0; i < lineRes; i++)
         {
             float currentRadian = radianProgressPerStep*i + polygonTheta;

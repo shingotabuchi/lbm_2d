@@ -5,7 +5,16 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/goodscenes/LBM_D2Q4.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 0
+    path: Assets/Scenes/goodscenes/Demos/ThermalConvection.unity
+    guid: fae294623dbbdc841aff627c0bf57adb
+  - enabled: 0
+    path: Assets/Scenes/goodscenes/LBMCage.unity
+    guid: ab16a32c035514b4f900f925aaf1ef30
+  - enabled: 1
+    path: Assets/Scenes/goodscenes/Demos/TC.unity
+    guid: 17ef038bcef8a2e4d9987386571551eb
   m_configObjects: {}

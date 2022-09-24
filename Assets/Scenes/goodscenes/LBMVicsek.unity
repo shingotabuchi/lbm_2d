@@ -560,7 +560,7 @@ MonoBehaviour:
   particleFov: 210
   noiseAngleDeg: 0
   gravity: 0
-  align: 0
+  align: 1
 --- !u!1 &1395225116
 GameObject:
   m_ObjectHideFlags: 0

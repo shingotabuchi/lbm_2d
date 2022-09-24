@@ -27,27 +27,23 @@ public class ColorHeatMap
         int blockIdx = (int)Math.Truncate(blockOfColor);// Idx of 
         float valPercResidual = valPerc - (blockIdx*colorPerc);//remove the part represented of block 
         float percOfColor = valPercResidual / colorPerc;// % of color of this block that will be filled
-
         Color cTarget = ColorsOfMap[blockIdx];
-        Color cNext = cNext = ColorsOfMap[blockIdx + 1]; 
-
-        var deltaR =cNext.r - cTarget.r;
-        var deltaG =cNext.g - cTarget.g;
-        var deltaB =cNext.b - cTarget.b;
-
+        float deltaR = 0;
+        float deltaG = 0;
+        float deltaB = 0;
+        if(blockIdx + 1 != 7)
+        {
+            Color cNext = cNext = ColorsOfMap[blockIdx + 1]; 
+            deltaR =cNext.r - cTarget.r;
+            deltaG =cNext.g - cTarget.g;
+            deltaB =cNext.b - cTarget.b;
+        }
+        
         var R = cTarget.r + (deltaR * percOfColor);
         var G = cTarget.g + (deltaG * percOfColor);
         var B = cTarget.b + (deltaB * percOfColor);
 
-        Color c = ColorsOfMap[0];
-        try
-        {
-            c = new Color(R, G, B,1f);
-        }
-        catch (Exception ex)
-        {
-        }
-        return c;
+        return new Color(R, G, B,1f);
     }
     public List<Color> ColorsOfMap = new List<Color>();
 }

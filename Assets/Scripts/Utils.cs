@@ -360,7 +360,7 @@ public class RoundParticlesForCompute : ParticlesForCompute
             prevOmega1[n] = 0f;
             prevOmega2[n] = 0f;
             perimeterPointCount[n] = (int)(2.0f * Mathf.PI * radius[n] * 2.0f);
-            maxPerimeterPointCount = (int)Mathf.Abs(perimeterPointCount[n]);
+            maxPerimeterPointCount = (int)Mathf.Max(maxPerimeterPointCount,perimeterPointCount[n]);
             forceFromCollisions[n + 0*particleCount] = 0f;
             forceFromCollisions[n + 1*particleCount] = 0f;
             forceFromFluid[n + 0*particleCount] = 0f;
@@ -389,6 +389,167 @@ public class RoundParticlesForCompute : ParticlesForCompute
         }
     }
 
+    public void UpdateParticleCount(int newParticleCount,float[] newPos, float[] newTheta, GameObject[] newObjs)
+    {
+        objs = newObjs;
+        float[] newdensity = new float[newParticleCount];
+        float[] newradius = new float[newParticleCount];
+        float[] newvolume = new float[newParticleCount];
+        float[] newmass = new float[newParticleCount];
+        float[] newmomentOfInertia = new float[newParticleCount];
+        pos = newPos;
+        float[] newvel = new float[newParticleCount*2];
+        float[] newprevVel1 = new float[newParticleCount*2];
+        float[] newprevVel2 = new float[newParticleCount*2];
+        float[] newomega = new float[newParticleCount];
+        theta = newTheta;
+        float[] newprevOmega1 = new float[newParticleCount];
+        float[] newprevOmega2 = new float[newParticleCount];
+        int[] newperimeterPointCount = new int[newParticleCount];
+        float[] newforceFromCollisions = new float[newParticleCount*2];
+        float[] newforceFromFluid = new float[newParticleCount*2];
+        float[] newtorque = new float[newParticleCount];
+        for (int n = 0; n < newParticleCount; n++)
+        {
+            if(n<particleCount)
+            {
+                newdensity[n] = density[n];
+                newradius[n] = radius[n];
+                newvolume[n] = volume[n];
+                newmass[n] = mass[n];
+                newmomentOfInertia[n] = momentOfInertia[n];
+                // newpos[n + 0*newParticleCount] = pos[n + 0*particleCount];
+                // newpos[n + 1*newParticleCount] = pos[n + 1*particleCount];
+                newvel[n + 0*newParticleCount] = vel[n + 0*particleCount];
+                newvel[n + 1*newParticleCount] = vel[n + 1*particleCount];
+                newprevVel1[n + 0*newParticleCount] = prevVel1[n + 0*particleCount];
+                newprevVel1[n + 1*newParticleCount] = prevVel1[n + 1*particleCount];
+                newprevVel2[n + 0*newParticleCount] = prevVel2[n + 0*particleCount];
+                newprevVel2[n + 1*newParticleCount] = prevVel2[n + 1*particleCount];
+                newomega[n] = omega[n];
+                // newtheta[n] = theta[n];
+                newprevOmega1[n] = prevOmega1[n];
+                newprevOmega2[n] = prevOmega2[n];
+                newperimeterPointCount[n] = perimeterPointCount[n];
+                newforceFromCollisions[n + 0*newParticleCount] = forceFromCollisions[n + 0*particleCount];
+                newforceFromCollisions[n + 1*newParticleCount] = forceFromCollisions[n + 1*particleCount];
+                newforceFromFluid[n + 0*newParticleCount] = forceFromFluid[n + 0*particleCount];
+                newforceFromFluid[n + 1*newParticleCount] = forceFromFluid[n + 1*particleCount];
+                newtorque[n] = torque[n];
+            }
+            newdensity[n] = density[particleCount-1];
+            newradius[n] = radius[particleCount-1];
+            newvolume[n] = volume[particleCount-1];
+            newmass[n] = mass[particleCount-1];
+            newmomentOfInertia[n] = (Mathf.PI * newradius[n]*newradius[n]*newradius[n]*newradius[n] * newdensity[n])/2f;
+            // newpos[n + 0*newParticleCount] = newParticlePos[n + 0*particleCount];
+            // newpos[n + 1*newParticleCount] = newParticlePos[n + 1*particleCount];
+            newvel[n + 0*newParticleCount] = 0f;
+            newvel[n + 1*newParticleCount] = 0f;
+            newprevVel1[n + 0*newParticleCount] = 0f;
+            newprevVel1[n + 1*newParticleCount] = 0f;
+            newprevVel2[n + 0*newParticleCount] = 0f;
+            newprevVel2[n + 1*newParticleCount] = 0f;
+            newomega[n] = 0f;
+            // newtheta[n] = theta[particleCount-1];
+            newprevOmega1[n] = 0f;
+            newprevOmega2[n] = 0f;
+            newperimeterPointCount[n] = (int)(2.0f * Mathf.PI * newradius[n] * 2.0f);
+            newforceFromCollisions[n + 0*newParticleCount] = 0f;
+            newforceFromCollisions[n + 1*newParticleCount] = 0f;
+            newforceFromFluid[n + 0*newParticleCount] = 0f;
+            newforceFromFluid[n + 1*newParticleCount] = 0f;
+            newtorque[n] = 0f;
+        }
+
+        density = newdensity;
+        radius = newradius;
+        volume = newvolume;
+        mass = newmass;
+        momentOfInertia = newmomentOfInertia;
+        vel = newvel;
+        prevVel1 = newprevVel1;
+        prevVel2 = newprevVel2;
+        omega = newomega;
+        prevOmega1 = newprevOmega1;
+        prevOmega2 = newprevOmega2;
+        perimeterPointCount = newperimeterPointCount;
+        forceFromCollisions = newforceFromCollisions;
+        forceFromFluid = newforceFromFluid;
+        torque = newtorque;
+
+        perimeterPos = new float[maxPerimeterPointCount*2*newParticleCount];
+        perimeterVel = new float[maxPerimeterPointCount*2*newParticleCount];
+        float[] newperimeterFluidVel = new float[maxPerimeterPointCount*2*newParticleCount];
+        float[] newforceOnPerimeter = new float[maxPerimeterPointCount*2*newParticleCount];
+        for (int n = 0; n < newParticleCount; n++)
+        {
+            for (int i = 0; i < perimeterPointCount[n]; i++)
+            {
+                float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)perimeterPointCount[n] + theta[n];
+
+                perimeterPos[n + (i + 0*maxPerimeterPointCount)*newParticleCount] = pos[n + 0*newParticleCount] + radius[n] * Mathf.Cos(angle);
+                perimeterPos[n + (i + 1*maxPerimeterPointCount)*newParticleCount] = pos[n + 1*newParticleCount] + radius[n] * Mathf.Sin(angle);
+                perimeterVel[n + (i + 0*maxPerimeterPointCount)*newParticleCount] = vel[n + 0*newParticleCount] - omega[n]*(perimeterPos[n + (i + 1*maxPerimeterPointCount)*newParticleCount] - pos[n + 1*newParticleCount]);
+                perimeterVel[n + (i + 1*maxPerimeterPointCount)*newParticleCount] = vel[n + 1*newParticleCount] + omega[n]*(perimeterPos[n + (i + 0*maxPerimeterPointCount)*newParticleCount] - pos[n + 0*newParticleCount]);
+                if(n<particleCount)
+                {
+                    newforceOnPerimeter[n + (i + 0*maxPerimeterPointCount)*newParticleCount] = forceOnPerimeter[n + (i + 0*maxPerimeterPointCount)*particleCount];
+                    newforceOnPerimeter[n + (i + 1*maxPerimeterPointCount)*newParticleCount] = forceOnPerimeter[n + (i + 1*maxPerimeterPointCount)*particleCount];
+                    newperimeterFluidVel[n + (i + 0*maxPerimeterPointCount)*newParticleCount] = perimeterFluidVel[n + (i + 0*maxPerimeterPointCount)*particleCount];
+                    newperimeterFluidVel[n + (i + 1*maxPerimeterPointCount)*newParticleCount] = perimeterFluidVel[n + (i + 1*maxPerimeterPointCount)*particleCount];
+                }
+                else
+                {
+                    newforceOnPerimeter[n + (i + 0*maxPerimeterPointCount)*newParticleCount] = 0f;
+                    newforceOnPerimeter[n + (i + 1*maxPerimeterPointCount)*newParticleCount] = 0f;
+                    newperimeterFluidVel[n + (i + 0*maxPerimeterPointCount)*newParticleCount] =0f;
+                    newperimeterFluidVel[n + (i + 1*maxPerimeterPointCount)*newParticleCount] =0f;
+                }
+            }
+        }
+        forceOnPerimeter = newperimeterFluidVel;
+        perimeterFluidVel = newperimeterFluidVel;
+        particleCount = newParticleCount;
+    }
+    public void UpdateRadius(float newRadius)
+    { 
+        int newMaxPerimeterPointCount = 0;
+        int[] newPerimeterPointCount = new int[particleCount];
+        for (int n = 0; n < particleCount; n++)
+        {
+            radius[n] = newRadius;
+            volume[n] = Mathf.PI*radius[n]*radius[n];
+            mass[n] = volume[n] * density[n];
+            momentOfInertia[n] = (Mathf.PI * radius[n]*radius[n]*radius[n]*radius[n] * density[n])/2f;
+            newPerimeterPointCount[n] = (int)(2.0f * Mathf.PI * radius[n] * 2.0f);
+            newMaxPerimeterPointCount = (int)Mathf.Max(newMaxPerimeterPointCount,newPerimeterPointCount[n]);
+        }
+        perimeterPos = new float[newMaxPerimeterPointCount*2*particleCount];
+        perimeterVel = new float[newMaxPerimeterPointCount*2*particleCount];
+        float[] newPerimeterFluidVel = new float[newMaxPerimeterPointCount*2*particleCount];
+        float[] newForceOnPerimeter = new float[newMaxPerimeterPointCount*2*particleCount];
+        for (int n = 0; n < particleCount; n++)
+        {
+            for (int i = 0; i < newPerimeterPointCount[n]; i++)
+            {
+                float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)newPerimeterPointCount[n] + theta[n];
+
+                perimeterPos[n + (i + 0*newMaxPerimeterPointCount)*particleCount] = pos[n + 0*particleCount] + radius[n] * Mathf.Cos(angle);
+                perimeterPos[n + (i + 1*newMaxPerimeterPointCount)*particleCount] = pos[n + 1*particleCount] + radius[n] * Mathf.Sin(angle);
+                perimeterVel[n + (i + 0*newMaxPerimeterPointCount)*particleCount] = vel[n + 0*particleCount] - omega[n]*(perimeterPos[n + (i + 1*newMaxPerimeterPointCount)*particleCount] - pos[n + 1*particleCount]);
+                perimeterVel[n + (i + 1*newMaxPerimeterPointCount)*particleCount] = vel[n + 1*particleCount] + omega[n]*(perimeterPos[n + (i + 0*newMaxPerimeterPointCount)*particleCount] - pos[n + 0*particleCount]);
+                newForceOnPerimeter[n + (i + 0*newMaxPerimeterPointCount)*particleCount] = forceOnPerimeter[n + ((int)((float)(i*perimeterPointCount[n])/(float)newPerimeterPointCount[n]) + 0*maxPerimeterPointCount)*particleCount];
+                newForceOnPerimeter[n + (i + 1*newMaxPerimeterPointCount)*particleCount] = forceOnPerimeter[n + ((int)((float)(i*perimeterPointCount[n])/(float)newPerimeterPointCount[n]) + 1*maxPerimeterPointCount)*particleCount];
+                newPerimeterFluidVel[n + (i + 0*newMaxPerimeterPointCount)*particleCount] = perimeterFluidVel[n + ((int)((float)(i*perimeterPointCount[n])/(float)newPerimeterPointCount[n]) + 0*maxPerimeterPointCount)*particleCount];
+                newPerimeterFluidVel[n + (i + 1*newMaxPerimeterPointCount)*particleCount] = perimeterFluidVel[n + ((int)((float)(i*perimeterPointCount[n])/(float)newPerimeterPointCount[n]) + 1*maxPerimeterPointCount)*particleCount];
+            }
+            perimeterPointCount[n] = newPerimeterPointCount[n];
+        }
+        maxPerimeterPointCount = newMaxPerimeterPointCount;
+        forceOnPerimeter = newForceOnPerimeter;
+        perimeterFluidVel = newPerimeterFluidVel;
+    }
     
     public void PlotParticleFill(ref Color[] pixels, Color? color = null)
     {

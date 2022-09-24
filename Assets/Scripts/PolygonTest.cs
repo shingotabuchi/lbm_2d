@@ -36,6 +36,9 @@ public class PolygonTest : MonoBehaviour
     public Slider[] CosSliders;
     public Slider[] SinSliders;
 
+    public Text[] cosTexts;
+    public Text[] sinTexts;
+
     Mesh mesh;
     void Start()
     {
@@ -164,10 +167,12 @@ public class PolygonTest : MonoBehaviour
         for (int i = 0; i < 3; i++)
         {
             modeCoeffs[i+1] = CosSliders[i].value;
+            cosTexts[i].text = "a" + (i+1).ToString() + " " + "=" + " " + modeCoeffs[i+1].ToString("0.000");
         }
         for (int i = 0; i < 3; i++)
         {
             modeSinCoeffs[i+1] = SinSliders[i].value;
+            sinTexts[i].text = "b" + (i+1).ToString() + " " + "=" + " " + modeSinCoeffs[i+1].ToString("0.000");
         }
         DrawLine();
     }

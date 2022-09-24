@@ -415,20 +415,20 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
             roundParticles[n].forceFromCollisions[0] = 0f;
             roundParticles[n].forceFromCollisions[1] = 0f;
 
-            // for (int k = 0; k < particleCount; k++)
-            // {
-            //     if(k==n) continue;
-            //     for (int i = 0; i < 2; i++)
-            //     {
-            //         tmp1 = roundParticles[n].ParticleDistance(roundParticles[k]);
-            //         // print(tmp1);
-            //         if(tmp1 < 2.0f*roundParticles[n].radius + zeta)
-            //         {
-            //             roundParticles[n].forceFromCollisions[i] += (roundParticles[n].pos[i] - roundParticles[k].pos[i])*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
-            //             print(roundParticles[n].forceFromCollisions[i]);
-            //         }
-            //     }
-            // }
+            for (int k = 0; k < particleCount; k++)
+            {
+                if(k==n) continue;
+                for (int i = 0; i < 2; i++)
+                {
+                    tmp1 = roundParticles[n].ParticleDistance(roundParticles[k]);
+                    // print(tmp1);
+                    if(tmp1 < 2.0f*roundParticles[n].radius + zeta)
+                    {
+                        roundParticles[n].forceFromCollisions[i] += (roundParticles[n].pos[i] - roundParticles[k].pos[i])*(2.0f*roundParticles[n].radius - tmp1 + zeta)*(2.0f*roundParticles[n].radius - tmp1 + zeta)/epsw;
+                        print(roundParticles[n].forceFromCollisions[i]);
+                    }
+                }
+            }
 
             float wallDistance;
             wallDistance = Mathf.Abs(roundParticles[n].pos[1]);
@@ -447,17 +447,17 @@ public class LBMNatConvThermoPhoresis : MonoBehaviour
             {
                 roundParticles[n].perimeterFluidVel[m,0] = 0f;
                 roundParticles[n].perimeterFluidVel[m,1] = 0f;
-                // float angle = Vector2.Angle(
-                //     new Vector2(roundParticles[n].perimeterPos[m,0] - roundParticles[n].pos[0],roundParticles[n].perimeterPos[m,1] - roundParticles[n].pos[1]),
-                //     new Vector2(-Mathf.Sin(roundParticles[n].theta),Mathf.Cos(roundParticles[n].theta))
-                // );
-                // if((int)roundParticles[n].perimeterPos[m,0] >= 0 && (int)roundParticles[n].perimeterPos[m,0] < DIM_X
-                //     && (int)roundParticles[n].perimeterPos[m,1] >= 0 && (int)roundParticles[n].perimeterPos[m,1] < DIM_Y
-                // )
-                // {
-                //     if(angle>90f)temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleTemp;
-                //     // else temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleLowerTemp;
-                // }
+                float angle = Vector2.Angle(
+                    new Vector2(roundParticles[n].perimeterPos[m,0] - roundParticles[n].pos[0],roundParticles[n].perimeterPos[m,1] - roundParticles[n].pos[1]),
+                    new Vector2(-Mathf.Sin(roundParticles[n].theta),Mathf.Cos(roundParticles[n].theta))
+                );
+                if((int)roundParticles[n].perimeterPos[m,0] >= 0 && (int)roundParticles[n].perimeterPos[m,0] < DIM_X
+                    && (int)roundParticles[n].perimeterPos[m,1] >= 0 && (int)roundParticles[n].perimeterPos[m,1] < DIM_Y
+                )
+                {
+                    if(angle>90f)temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleTemp;
+                    // else temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleLowerTemp;
+                }
                 // else temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = particleLowerTemp;
                 // temp[(int)roundParticles[n].perimeterPos[m,0],(int)roundParticles[n].perimeterPos[m,1]] = 1f;
                 // 固体表面の速度を計算
