@@ -192,6 +192,11 @@ public class PolygonParticle : Particle
     public PolygonParticle()
     {
     }
+    public void UpdateVolume(float newVolume)
+    {
+        volume = newVolume;
+        mass = volume * density;
+    }
 }
 public class ParticlesForCompute
 {
@@ -356,7 +361,8 @@ public class RoundParticlesForCompute : ParticlesForCompute
             prevVel2[n + 0*particleCount] = 0f;
             prevVel2[n + 1*particleCount] = 0f;
             omega[n] = 0f;
-            theta[n] = _initTheta;
+            // theta[n] = _initTheta;
+            theta[n] = Random.Range(0f,2f*Mathf.PI);
             prevOmega1[n] = 0f;
             prevOmega2[n] = 0f;
             perimeterPointCount[n] = (int)(2.0f * Mathf.PI * radius[n] * 2.0f);
@@ -658,6 +664,35 @@ public class RoundParticle : Particle
             perimeterFluidVel[i,0] = 0f;
             perimeterFluidVel[i,1] = 0f;
         } 
+    }
+
+    public void UpdateRadius(float newRad)
+    {
+        radius = newRad;
+        volume = Mathf.PI*radius*radius;
+        mass = volume * density;
+        momentOfInertia = (Mathf.PI * radius*radius*radius*radius * density)/2f;
+        int newperimeterPointCount = (int)(2.0f * Mathf.PI * radius * 2.0f);
+        perimeterPos = new float[newperimeterPointCount,2];
+        perimeterVel = new float[newperimeterPointCount,2];
+        float[,] newperimeterFluidVel = new float[newperimeterPointCount,2];
+        float[,] newforceOnPerimeter = new float[newperimeterPointCount,2];
+        for(int i = 0; i < newperimeterPointCount; i++) 
+        {
+            float angle = (3f*Mathf.PI)/2f + 2.0f*Mathf.PI*(float)i/(float)newperimeterPointCount + theta;
+
+            perimeterPos[i,0] = pos[0] + radius * Mathf.Cos(angle);
+            perimeterPos[i,1] = pos[1] + radius * Mathf.Sin(angle);
+            perimeterVel[i,0] = vel[0] - omega*(perimeterPos[i,1] - pos[1]);
+            perimeterVel[i,1] = vel[1] + omega*(perimeterPos[i,0] - pos[0]);
+            newperimeterFluidVel[i,0] = perimeterFluidVel[(int)(((float)i*perimeterPointCount)/(float)newperimeterPointCount),0];
+            newperimeterFluidVel[i,1] = perimeterFluidVel[(int)(((float)i*perimeterPointCount)/(float)newperimeterPointCount),1];
+            newforceOnPerimeter[i,0] = forceOnPerimeter[(int)(((float)i*perimeterPointCount)/(float)newperimeterPointCount),0];
+            newforceOnPerimeter[i,1] = forceOnPerimeter[(int)(((float)i*perimeterPointCount)/(float)newperimeterPointCount),1];
+        } 
+        perimeterPointCount = newperimeterPointCount;
+        forceOnPerimeter = newforceOnPerimeter;
+        perimeterFluidVel = newperimeterFluidVel;
     }
 
     

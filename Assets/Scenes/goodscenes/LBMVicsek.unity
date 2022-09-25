@@ -545,22 +545,22 @@ MonoBehaviour:
   minSpeed: 0
   maxRho: 0
   minRho: 0
-  loopCount: 1
+  loopCount: 12
   particlePrefab: {fileID: 5967441514033678248, guid: 85aac0deefb57984d829fb175e5e2fd3, type: 3}
   particleParent: {fileID: 232056657}
-  particleCount: 50
+  particleCount: 1
   particleDensity: 1.25
   particleRadius: 2.25
   zeta: 0.1
   epsw: 10
   DIM_X: 64
   DIM_Y: 64
-  particlePropulsion: 0.05
+  particlePropulsion: 0.2
   particleViewRange: 3
   particleFov: 210
   noiseAngleDeg: 0
   gravity: 0
-  align: 1
+  align: 0
 --- !u!1 &1395225116
 GameObject:
   m_ObjectHideFlags: 0

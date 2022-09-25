@@ -14,7 +14,19 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/goodscenes/LBMCage.unity
     guid: ab16a32c035514b4f900f925aaf1ef30
+  - enabled: 0
+    path: Assets/Scenes/goodscenes/Demos/NewVicsek.unity
+    guid: 742e684d0d6d68d40a182e47625cbfb5
   - enabled: 1
-    path: Assets/Scenes/goodscenes/Demos/TC.unity
+    path: Assets/Scenes/goodscenes/Demos/Menu.unity
+    guid: 3f4ca73ac1dd24b4eac24bde13972cb0
+  - enabled: 1
+    path: Assets/Scenes/goodscenes/Demos/FinalDemos/TC.unity
     guid: 17ef038bcef8a2e4d9987386571551eb
+  - enabled: 1
+    path: Assets/Scenes/goodscenes/Demos/FinalDemos/NewFaller.unity
+    guid: baf5bf1a7b3316348be69eeab799a07c
+  - enabled: 1
+    path: Assets/Scenes/goodscenes/Demos/FinalDemos/VicsekLike.unity
+    guid: 04e57c6f3a2df4249b03afc291e8446f
   m_configObjects: {}

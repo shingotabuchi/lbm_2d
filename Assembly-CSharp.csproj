@@ -79,6 +79,8 @@
      <Compile Include="Assets\Scripts\D2Q4AdvectionMain.cs" />
      <Compile Include="Assets\Scenes\goodscenes\Demos\Knob.cs" />
      <Compile Include="Assets\Scripts\FallerMain.cs" />
+     <Compile Include="Assets\Scripts\NewVicsek.cs" />
+     <Compile Include="Assets\Scenes\goodscenes\Demos\Menu.cs" />
      <None Include="Assets\ComputeShaders\D2Q4Test.compute" />
      <None Include="Assets\Scripts\data.txt" />
      <None Include="Assets\ComputeShaders\LBMNatConv.compute" />

@@ -26,7 +26,7 @@ public class LBMVicsek : MonoBehaviour
     public GameObject particlePrefab;
     public Transform particleParent;
     public int particleCount;
-    RoundParticle[] roundParticles;
+    List<RoundParticle> roundParticles = new List<RoundParticle>();
     public float particleDensity = 1.25f;
     public float particleRadius = 1.25f;
     public float zeta = 0.1f;
@@ -38,26 +38,65 @@ public class LBMVicsek : MonoBehaviour
     float plotScale;
     public float noiseAngleDeg = 30f;
     public float gravity = 0f;
+    float gx,gy;
 
     public bool align;
     Vector2 plotSizeDelta;
+
+    public bool isForDemo = false;
+    public Toggle alignToggle;
+    public Slider viewRangeSlider;
+    public Slider noiseAngleSlider;
+    public Slider particleFovSlider;
+    public Slider particlePropelSlider;
+    public Slider gxSlider;
+    public Slider gySlider;
+    public InputField inputFieldH;
+    public InputField inputFieldW;
+    public Slider loopCountSlider;
+    public Slider particleCountSlider;
+    public Slider particleRadiusSlider;
     
     // Start is called before the first frame update
     void Start()
     {
+        if(isForDemo)
+        {
+            particleViewRange = viewRangeSlider.value;
+            particleFov = particleFovSlider.value;
+            noiseAngleDeg = noiseAngleSlider.value;
+            particlePropulsion = particlePropelSlider.value;
+            DIM_X = int.Parse(inputFieldW.text);
+            DIM_Y = int.Parse(inputFieldH.text);
+            vectorField.aspectRatio = (float)DIM_X/(float)DIM_Y;
+            particleRadius = particleRadiusSlider.value; 
+        }
+        
         plotTexture = new Texture2D(DIM_X,DIM_Y);
         plotTexture.filterMode = FilterMode.Point;
         plotPixels = plotTexture.GetPixels();
         plotImage.sprite = Sprite.Create(plotTexture, new Rect(0,0,DIM_X,DIM_Y),Vector2.zero);
-
-        roundParticles = new RoundParticle[particleCount];
+        if(DIM_X>DIM_Y)
+        {
+            plotImage.transform.GetComponent<RectTransform>().sizeDelta = new Vector2(
+                plotImage.transform.GetComponent<RectTransform>().sizeDelta.x,
+                (plotImage.transform.GetComponent<RectTransform>().sizeDelta.x*(float)DIM_Y)/(float)DIM_X
+            );
+        }
+        if(DIM_X<DIM_Y)
+        {
+            plotImage.transform.GetComponent<RectTransform>().sizeDelta = new Vector2(
+                (plotImage.transform.GetComponent<RectTransform>().sizeDelta.y*(float)DIM_X)/(float)DIM_Y,
+                plotImage.transform.GetComponent<RectTransform>().sizeDelta.y
+            );
+        }
         float scale = (2f*particleRadius*plotImage.transform.GetComponent<RectTransform>().sizeDelta.x * plotImage.transform.localScale.x)/(DIM_X*particlePrefab.GetComponent<RectTransform>().sizeDelta.x);
         plotSizeDelta = plotImage.transform.GetComponent<RectTransform>().sizeDelta;
         plotScale = plotImage.transform.localScale.x;
         for (int i = 0; i < particleCount; i++)
         {
             float[] spawnPos =  new float[2]{UnityEngine.Random.Range(particleRadius,DIM_X-particleRadius),UnityEngine.Random.Range(particleRadius,DIM_Y-particleRadius)};
-            roundParticles[i] = new RoundParticle(particleDensity,particleRadius,spawnPos,Random.Range(0f,2f*Mathf.PI));
+            roundParticles.Add(new RoundParticle(particleDensity,particleRadius,spawnPos,Random.Range(0f,2f*Mathf.PI)));
             roundParticles[i].obj = Instantiate(particlePrefab,particleParent);
             roundParticles[i].obj.GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
                                                                                 + new Vector2((spawnPos[0]*plotSizeDelta.x)/DIM_X,(spawnPos[1]*plotSizeDelta.y)/DIM_Y))*plotScale;
@@ -106,6 +145,57 @@ public class LBMVicsek : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(isForDemo)
+        {
+            gxSlider.transform.Find("Text").GetComponent<Text>().text = "Gx=" + gxSlider.value.ToString("0.000");
+            gySlider.transform.Find("Text").GetComponent<Text>().text = "Gy=" + gySlider.value.ToString("0.000");
+            viewRangeSlider.transform.Find("Text").GetComponent<Text>().text = "View range=" + viewRangeSlider.value.ToString("0.0");
+            particleFovSlider.transform.Find("Text").GetComponent<Text>().text = "FOV=" + particleFovSlider.value.ToString("0.0");
+            noiseAngleSlider.transform.Find("Text").GetComponent<Text>().text = "Noise angle=" + noiseAngleSlider.value.ToString("0.0");
+            particlePropelSlider.transform.Find("Text").GetComponent<Text>().text = "Propulsion=" + particlePropelSlider.value.ToString("0.000");
+            loopCountSlider.transform.Find("Text").GetComponent<Text>().text = "Steps per frame=" + loopCountSlider.value.ToString("0");
+            gx = gxSlider.value;
+            gy = gySlider.value;
+            particleViewRange = viewRangeSlider.value;
+            particleFov = particleFovSlider.value;
+            noiseAngleDeg = noiseAngleSlider.value;
+            particlePropulsion = particlePropelSlider.value;
+            loopCount = (int)loopCountSlider.value;
+
+            if(particleCount > (int)particleCountSlider.value)
+            {
+                for (int i = 0; i < particleCount - (int)particleCountSlider.value; i++)
+                {
+                    Destroy(roundParticles[roundParticles.Count-1].obj);
+                    roundParticles.RemoveAt(roundParticles.Count-1);
+                }
+            }
+            if(particleCount < (int)particleCountSlider.value)
+            {
+                float scale = (2f*particleRadius*plotImage.transform.GetComponent<RectTransform>().sizeDelta.x * plotImage.transform.localScale.x)/(DIM_X*particlePrefab.GetComponent<RectTransform>().sizeDelta.x);
+                for (int i = 0; i < (int)particleCountSlider.value - particleCount; i++)
+                {
+                    float[] spawnPos =  new float[2]{UnityEngine.Random.Range(particleRadius,DIM_X-particleRadius),UnityEngine.Random.Range(particleRadius,DIM_Y-particleRadius)};
+                    roundParticles.Add(new RoundParticle(particleDensity,particleRadius,spawnPos,Random.Range(0f,2f*Mathf.PI)));
+                    roundParticles[roundParticles.Count-1].obj = Instantiate(particlePrefab,particleParent);
+                    roundParticles[roundParticles.Count-1].obj.GetComponent<RectTransform>().anchoredPosition = (-plotSizeDelta/2f  
+                                                                                        + new Vector2((spawnPos[0]*plotSizeDelta.x)/DIM_X,(spawnPos[1]*plotSizeDelta.y)/DIM_Y))*plotScale;
+                    roundParticles[roundParticles.Count-1].obj.transform.localScale = new Vector3(scale,scale,1);
+                }
+            }
+            particleCount =  (int)particleCountSlider.value;
+
+            if(particleRadius != particleRadiusSlider.value)
+            {
+                float scale = (2f*particleRadius*plotImage.transform.GetComponent<RectTransform>().sizeDelta.x * plotImage.transform.localScale.x)/(DIM_X*particlePrefab.GetComponent<RectTransform>().sizeDelta.x);
+                for (int i = 0; i < particleCount; i++)
+                {
+                    roundParticles[i].UpdateRadius(particleRadiusSlider.value);
+                    roundParticles[i].obj.transform.localScale = new Vector3(scale,scale,1);
+                }
+                particleRadius = particleRadiusSlider.value;
+            }
+        }
         for (int i = 0; i < loopCount; i++)
         {
             LBMStep();
@@ -482,9 +572,8 @@ public class LBMVicsek : MonoBehaviour
             roundParticles[n].forceFromFluid[0] *= -2f*Mathf.PI*roundParticles[n].radius/(float)roundParticles[n].perimeterPointCount;  
             roundParticles[n].forceFromFluid[1] *= -2f*Mathf.PI*roundParticles[n].radius/(float)roundParticles[n].perimeterPointCount;  
             roundParticles[n].torque *= -2f*Mathf.PI*roundParticles[n].radius/(float)roundParticles[n].perimeterPointCount;  
-
             // roundParticles[n].UpdatePosVel(new float[2]{-Mathf.Sin(roundParticles[n].theta)*particlePropulsion,Mathf.Cos(roundParticles[n].theta)*particlePropulsion});
-            roundParticles[n].UpdatePosVel();
+            roundParticles[n].UpdatePosVel(new float[2]{gx,gy});
             roundParticles[n].UpdateOmegaTheta();
             roundParticles[n].UpdatePerimeter();
         }

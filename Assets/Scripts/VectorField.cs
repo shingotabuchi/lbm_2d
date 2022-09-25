@@ -12,7 +12,7 @@ public class VectorField : MonoBehaviour
     public GameObject[,] vectors;
     public float aspectRatio = 1f;
     float dx,dy,rangeX,rangeY;
-    void Start()
+    public void Start()
     {
         resIntX = (int)(resInt*aspectRatio);
         vectors = new GameObject[resIntX+1,resInt+1];
@@ -28,6 +28,17 @@ public class VectorField : MonoBehaviour
                 vectors[i,j] = Instantiate(vectorImage,canvasTrans);
                 vectors[i,j].GetComponent<RectTransform>().anchoredPosition = new Vector2(dx*i,dy*j) + origin;
                 vectors[i,j].GetComponent<RectTransform>().sizeDelta = new Vector2(0,0);
+            }
+        }
+    }
+
+    public void DestroyAll()
+    {
+        for (int i = 0; i <= resIntX; i++)
+        {
+            for (int j = 0; j <= resInt; j++)
+            {
+                Destroy(vectors[i,j]);
             }
         }
     }
