@@ -147,8 +147,12 @@ public class FallerMain : MonoBehaviour
     public Slider particleFovSlider;
     public Slider particlePropelSlider;
     float particleViewRange,particleFov,noiseAngleDeg,particlePropulsion;
-
+    
+    public LineRenderer traceLine;
+    List<Vector3> tracePoints = new List<Vector3>();
+    public float traceThres = 0.5f;
     Vector2 originalPlotSizeDelta;
+    public Toggle showTrace;
     // Start is called before the first frame update
     void Start()
     {
@@ -362,6 +366,7 @@ public class FallerMain : MonoBehaviour
 
         if(isFaller)
         {
+            traceLine.transform.gameObject.SetActive(showTrace.isOn);
             gxSlider.transform.Find("Text").GetComponent<Text>().text = "Gx=" + gxSlider.value.ToString("0.000");
             gySlider.transform.Find("Text").GetComponent<Text>().text = "Gy=" + gySlider.value.ToString("0.000");
             for (int i = 0; i < 3; i++)
@@ -1237,6 +1242,7 @@ public class FallerMain : MonoBehaviour
 
     public void Reset()
     {
+        tracePoints.Clear();
         DIM_X = int.Parse(inputFieldW.text);
         DIM_Y = int.Parse(inputFieldH.text);
         time = 0;
@@ -1498,6 +1504,40 @@ public class FallerMain : MonoBehaviour
         ));
         mesh.vertices = linePoints.ToArray();
         mesh.triangles = triangleList.ToArray();
+        if(tracePoints.Count == 0)
+        {
+            tracePoints.Add(new Vector3(
+                (((polygonParticle.pos[0] - (float)DIM_X/2f)/((float)DIM_X/2f))*plotSizeDelta.x*plotScale.x/2f + plotAnchPos.x)*canvas.localScale.x,
+                (((polygonParticle.pos[1] - (float)DIM_Y/2f)/((float)DIM_Y/2f))*plotSizeDelta.y*plotScale.y/2f + plotAnchPos.y)*canvas.localScale.y,
+                0
+            ));
+            tracePoints.Add(new Vector3(
+                (((polygonParticle.pos[0] - (float)DIM_X/2f)/((float)DIM_X/2f))*plotSizeDelta.x*plotScale.x/2f + plotAnchPos.x)*canvas.localScale.x,
+                (((polygonParticle.pos[1] - (float)DIM_Y/2f)/((float)DIM_Y/2f))*plotSizeDelta.y*plotScale.y/2f + plotAnchPos.y)*canvas.localScale.y,
+                0
+            ));
+            traceLine.positionCount = tracePoints.Count;
+            traceLine.SetPositions(tracePoints.ToArray());
+        }
+        else if((tracePoints[tracePoints.Count-1] - tracePoints[tracePoints.Count-2]).sqrMagnitude > traceThres*traceThres)
+        {
+            tracePoints.Add(new Vector3(
+                (((polygonParticle.pos[0] - (float)DIM_X/2f)/((float)DIM_X/2f))*plotSizeDelta.x*plotScale.x/2f + plotAnchPos.x)*canvas.localScale.x,
+                (((polygonParticle.pos[1] - (float)DIM_Y/2f)/((float)DIM_Y/2f))*plotSizeDelta.y*plotScale.y/2f + plotAnchPos.y)*canvas.localScale.y,
+                0
+            ));
+            traceLine.positionCount = tracePoints.Count;
+            traceLine.SetPositions(tracePoints.ToArray());
+        }
+        else
+        {
+            tracePoints[tracePoints.Count-1] = new Vector3(
+                (((polygonParticle.pos[0] - (float)DIM_X/2f)/((float)DIM_X/2f))*plotSizeDelta.x*plotScale.x/2f + plotAnchPos.x)*canvas.localScale.x,
+                (((polygonParticle.pos[1] - (float)DIM_Y/2f)/((float)DIM_Y/2f))*plotSizeDelta.y*plotScale.y/2f + plotAnchPos.y)*canvas.localScale.y,
+                0
+            );
+            traceLine.SetPositions(tracePoints.ToArray());
+        }
     }
 
     public void OnShindoAllChange()

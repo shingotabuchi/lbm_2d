@@ -2901,7 +2901,7 @@ MonoBehaviour:
   loopCount: 12
   particlePrefab: {fileID: 5967441514033678248, guid: 85aac0deefb57984d829fb175e5e2fd3, type: 3}
   particleParent: {fileID: 2146895667}
-  particleCount: 1
+  particleCount: 25
   particleDensity: 1.25
   particleRadius: 2.25
   zeta: 0.1
@@ -6657,7 +6657,7 @@ MonoBehaviour:
   m_MinValue: 1
   m_MaxValue: 50
   m_WholeNumbers: 1
-  m_Value: 1
+  m_Value: 25
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
