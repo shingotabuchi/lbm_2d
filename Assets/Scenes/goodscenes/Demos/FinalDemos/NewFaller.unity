@@ -5039,7 +5039,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_IsOn: 0
+  m_IsOn: 1
 --- !u!1 &490245177
 GameObject:
   m_ObjectHideFlags: 0
@@ -14753,9 +14753,9 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1448811050}
   m_Direction: 0
   m_MinValue: 1
-  m_MaxValue: 20
+  m_MaxValue: 100
   m_WholeNumbers: 1
-  m_Value: 12
+  m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
