@@ -81,11 +81,11 @@ public class LBMLap : MonoBehaviour
             {
                 u[i,j] = 0.0f; v[i,j] = 0.0f; 
                 rho[i,j] = 1.0f;
-                // tmp = Mathf.Sqrt(Mathf.Pow(((float)i - (float)(DIM_X-1)*0.5f),2) + Mathf.Pow(((float)j - (float)(DIM_Y-1)*0.5f),2));
+                tmp = Mathf.Sqrt(Mathf.Pow(((float)i - (float)(DIM_X-1)*0.5f),2) + Mathf.Pow(((float)j - (float)(DIM_Y-1)*0.5f),2));
                 // tmp = Mathf.Max(Mathf.Abs((float)i- (float)(DIM_X-1)*0.5f),Mathf.Abs((float)j- (float)(DIM_Y-1)*0.5f));
-                // phi[i,j] = -phi0*(float)Math.Tanh(2.0f*(tmp - radius)/wid);
+                phi[i,j] = -phi0*(float)Math.Tanh(2.0f*(tmp - radius)/wid);
 
-                phi[i,j] = phi0 + UnityEngine.Random.Range(-phi0/randomBunbo,phi0/randomBunbo);
+                // phi[i,j] = phi0 + UnityEngine.Random.Range(-phi0/randomBunbo,phi0/randomBunbo);
             }
         }
 

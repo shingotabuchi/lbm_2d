@@ -1,0 +1,282 @@
+// #pragma kernel InitPhi
+// #pragma kernel Init
+// #pragma kernel PlotOrderParameter
+// #pragma kernel Collision
+// #pragma kernel Streaming
+
+// int DIM_X,DIM_Y,DIMSqrd,DIMSqrd9;
+// float beta,kap,tauf,taug,phi0,gamma,wid;
+
+// RWTexture2D<float4> renderTexture;
+// RWStructuredBuffer<float> uv,f,g,phi,rho,chemPot;
+
+// float minRho,maxRho;
+// float minPhi,maxPhi;
+// float minSpeed,maxSpeed;
+// float radius;
+
+
+// static float4 colorsOfMap[7] = 
+// {
+//     float4(0,0,0,1),
+//     float4(0,0,1,1),
+//     float4(0,1,1,1),
+//     float4(0,1,0,1),
+//     float4(1,1,0,1),
+//     float4(1,0,0,1),
+//     float4(1,1,1,1),
+// };
+// static float colorPerc = 1.0 / (7.0-1.0);
+// float4 ColorMap(float val, float maxVal)
+// {
+//     if(val > maxVal) val = maxVal;
+//     float valPerc = val / maxVal;// value%
+//     int blockIdx = (int)(valPerc / colorPerc);// Idx of 
+//     float valPercResidual = valPerc - (blockIdx*colorPerc);//remove the part represented of block 
+//     float percOfColor = valPercResidual / colorPerc;// % of color of this block that will be filled
+//     float4 cTarget = colorsOfMap[blockIdx];
+//     float deltaR = 0;
+//     float deltaG = 0;
+//     float deltaB = 0;
+
+//     if(blockIdx != 6)
+//     {
+//         float4 cNext = colorsOfMap[blockIdx + 1];
+//         deltaR =cNext.x - cTarget.x;
+//         deltaG =cNext.y - cTarget.y;
+//         deltaB =cNext.z - cTarget.z;
+//     }
+
+//     float R = cTarget.r + (deltaR * percOfColor);
+//     float G = cTarget.g + (deltaG * percOfColor);
+//     float B = cTarget.b + (deltaB * percOfColor);
+
+//     return float4(R,G,B,1.0);
+// }
+
+// int BufferIndex(int x, int y)
+// {
+//     return x + y*DIM_X;
+// }
+
+// int BufferIndexUv(int index, int uvIndex)
+// {
+//     return index*2 + uvIndex;
+// }
+
+// int BufferIndexNine(int index, int nineIndex)
+// {
+//     return index*9 + nineIndex;
+// }
+
+// int IMod(int n, int N)
+// {
+//     return (int)((uint)(n + N) % (uint)N);
+// }
+
+// float DistFromOrigin(int i, int j)
+// {
+//     return sqrt(pow(((float)i - (float)(DIM_X)*0.5),2) + pow(((float)j - (float)(DIM_Y)*0.5),2));
+// }
+
+// [numthreads(8, 8, 1)]
+// void InitPhi(uint3 id : SV_DispatchThreadID)
+// {
+//     int i = (int)id.x;
+//     int j = (int)id.y;
+//     int index = i + j*DIM_X;
+//     phi[index] = -phi0 * tanh(2.0 * (DistFromOrigin(i,j) - radius*(float)DIM_X)/wid);
+// }
+
+// [numthreads(8, 8, 1)]
+// void Init(uint3 id : SV_DispatchThreadID)
+// {
+//     float w[]={4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
+//     float cx[] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+//     float cy[] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+//     int k;
+//     int i = (int)id.x;
+//     int j = (int)id.y;
+//     int index = i + j*DIM_X;
+    
+//     int ip = (i + 1)%DIM_X;
+//     int im = (i - 1+DIM_X)%DIM_X;
+//     int jp = (j + 1)%DIM_Y; 
+//     int jm = (j - 1+DIM_Y)%DIM_Y; 
+
+//     int indexIp = ip + j*DIM_X;
+//     int indexIm = im + j*DIM_X;
+//     int indexJp = i + jp*DIM_X;
+//     int indexJm = i + jm*DIM_X;
+
+//     float u = 0.0;
+//     float v = 0.0;
+
+//     uv[index*2 + 0] = u;
+//     uv[index*2 + 1] = v;
+
+//     float laplacianPhi = 
+//         phi[indexIp]+
+//         phi[indexIm]+
+//         phi[indexJp]+
+//         phi[indexJm]
+//         -4.0*phi[index];
+    
+//     float chemPot = 4.0 * beta * (pow(phi[index],2) - pow(phi0,2))*phi[index] - kap*laplacianPhi;
+//     float u2 = u*u + v*v;
+//     rho[index] = 1.0;
+//     float dens = rho[index];
+//     float f0 = dens*(1.0 -3.0/2.0*u2 - 15.0/4.0*phi[index]*chemPot)*4.0/9.0;
+//     float g0 = phi[index] - 5.0/9.0 * gamma * chemPot;
+
+//     int zeroIndex = index*9;
+//     int zeroIndexTmp = zeroIndex + DIMSqrd9;
+
+//     f[zeroIndex] = f0;
+//     g[zeroIndex] = g0;
+//     f[zeroIndexTmp] = f[zeroIndex];
+//     g[zeroIndexTmp] = g[zeroIndex];
+//     for(k = 1; k < 9; k++)
+//     {
+//         float cu = cx[k]*u + cy[k]*v;
+//         f0 = w[k]*dens*(1.0 + 3.0*cu +9.0/2.0*cu*cu -3.0/2.0*u2 + 3.0*phi[index]*chemPot);
+//         g0 = w[k]*(gamma*chemPot + 3.0*phi[index]*cu);
+
+//         int nineIndex = index*9 + k;
+//         int nineIndexTmp = nineIndex + DIMSqrd9;
+//         f[nineIndex] = f0;
+//         g[nineIndex] = g0;
+//         f[nineIndexTmp] = f[nineIndex];
+//         g[nineIndexTmp] = g[nineIndex];
+//     }
+// }
+
+// [numthreads(8, 8, 1)]
+// void PlotOrderParameter(uint3 id : SV_DispatchThreadID)
+// {
+//     int i = (int)id.x;
+//     int j = (int)id.y;
+//     int index = i + j*DIM_X;
+//     float orderParameter = phi[index];
+//     renderTexture[id.xy] = ColorMap(orderParameter-minPhi,maxPhi-minPhi);
+// }
+
+// [numthreads(8, 8, 1)]
+// void Collision(uint3 id : SV_DispatchThreadID)
+// {
+//     int k;
+//     int i = (int)id.x;
+//     int j = (int)id.y;
+//     int index = i + j*DIM_X;
+
+//     int ip = (i + 1)%DIM_X;
+//     int im = (i - 1+DIM_X)%DIM_X;
+//     int jp = (j + 1)%DIM_Y; 
+//     int jm = (j - 1+DIM_Y)%DIM_Y; 
+
+//     int indexIp = ip + j*DIM_X;
+//     int indexIm = im + j*DIM_X;
+//     int indexJp = i + jp*DIM_X;
+//     int indexJm = i + jm*DIM_X;
+
+//     float u = 0;
+//     float v = 0;
+//     float mu,order;
+//     float dens = 0;
+//     phi[index] = 0;
+//     float phiIp = 0;
+//     float phiIm = 0;
+//     float phiJp = 0;
+//     float phiJm = 0;
+//     for(k = 0; k < 9; k++)
+//     {
+//         int nineIndex = BufferIndexNine(index,k);
+//         int nineIndexIp = BufferIndexNine(indexIp,k);
+//         int nineIndexIm = BufferIndexNine(indexIm,k);
+//         int nineIndexJp = BufferIndexNine(indexJp,k);
+//         int nineIndexJm = BufferIndexNine(indexJm,k);
+//         u += f[nineIndex]*cx[k];
+//         v += f[nineIndex]*cy[k];
+//         dens += f[nineIndex];
+//         phi[index] += g[nineIndex];
+//         phiIp += g[nineIndexIp];
+//         phiIm += g[nineIndexIm];
+//         phiJp += g[nineIndexJp];
+//         phiJm += g[nineIndexJm];
+//     }
+    
+//     order = phi[index];
+//     float laplacianPhi = 
+//         phiIp+
+//         phiIm+
+//         phiJp+
+//         phiJm
+//         -4.0*phi[index];
+//     mu = 4.0 * beta * (pow(phi[index],2) - pow(phi0,2))*phi[index] - kap*laplacianPhi;
+
+//     float fx = mu * (phiIp - phiIm)*0.5;
+//     float fy = mu * (phiJp - phiJm)*0.5;
+
+//     u = u/dens + fx/2.0;
+//     v = v/dens + fy/2.0;
+
+//     uv[BufferIndexUv(index,0)] = u;
+//     uv[BufferIndexUv(index,1)] = v;
+
+//     float u2 = u*u + v*v;
+//     float uf = u*fx + v*fy;
+
+//     float f0 = dens*(1.0 -3.0/2.0*u2 - 15.0/4.0*order*mu)*4.0/9.0;
+//     float g0 = order - 5.0/9.0*gamma*mu;
+//     float fi = -4.0/3.0*(1.0 - 0.5/tauf)*uf;
+
+//     int zeroIndex = BufferIndexNine(index,0);
+//     int zeroIndexTmp = zeroIndex + DIMSqrd9;
+
+//     f[zeroIndex] = f[zeroIndexTmp] - (f[zeroIndexTmp] - f0)/tauf + fi;
+//     g[zeroIndex] = g[zeroIndexTmp] - (g[zeroIndexTmp] - g0)/taug;
+
+//     for(k = 1; k < 9; k++)
+//     {
+//         float cu = cx[k] * u + cy[k] * v;
+//         float cf = cx[k] * fx + cy[k] * fy;
+//         float ufc = cu*(fx*cx[k] + fy*cy[k]);
+
+//         f0 = w[k]*dens*(1.0 +3.0*cu +9.0/2.0*cu*cu - 3.0/2.0*u2 + 3.0*order*mu);
+//         g0 = w[k]*(gamma*mu + 3.0*order*cu);
+
+//         fi = w[k]*(1.0 - 0.5/tauf)*(3.0*cf + 9.0*ufc - 3.0*uf);
+//         int nineIndex = BufferIndexNine(index,k);
+//         int nineIndexTmp = nineIndex + DIMSqrd9;
+//         f[nineIndex] = f[nineIndexTmp] - (f[nineIndexTmp] - f0)/tauf + fi;
+//         g[nineIndex] = g[nineIndexTmp] - (g[nineIndexTmp] - g0)/taug;
+//     }
+// }
+
+
+// [numthreads(8, 8, 1)]
+// void Streaming(uint3 id : SV_DispatchThreadID)
+// {
+//     int k;
+//     int i = (int)id.x;
+//     int j = (int)id.y;
+//     int index = i + j*DIM_X;
+
+//     for(k = 0; k < 9; k++)
+//     {
+//         int im = (i + (int)cx[k] + DIM_X)%DIM_X; 
+//         int jm = (j + (int)cy[k] + DIM_Y)%DIM_Y;
+//         int indexTmp = im + jm*DIM_X;
+//         int nineIndex = index*9 + k;
+//         int nineIndexTmp = indexTmp*9 + k + DIMSqrd9;
+
+//         f[nineIndexTmp] = f[nineIndex];
+//         g[nineIndexTmp] = g[nineIndex];
+//     }
+// }
+
+// [numthreads(8, 8, 1)]
+// void CalcParameters(uint3 id : SV_DispatchThreadID)
+// {
+
+// }

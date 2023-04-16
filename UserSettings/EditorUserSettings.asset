@@ -5,6 +5,12 @@ EditorUserSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 4
   m_ConfigSettings:
+    RecentlyUsedSceneGuid-0:
+      value: 5209565755010d5f0b0b5f2316715b4443151c7c7b7b756379281837b1b36769
+      flags: 0
+    RecentlyUsedSceneGuid-1:
+      value: 0501515f50565f0b595e097146255a444f151a732d7d74617c284962b5b0646d
+      flags: 0
     RecentlyUsedScenePath-0:
       value: 22424703114646680e0b0227036c581f19130b2929262323620d183eedf37b1ee3eb3aecf5742a323016f6
       flags: 0
@@ -43,9 +49,13 @@ EditorUserSettings:
   m_VCDebugCmd: 0
   m_VCDebugOut: 0
   m_SemanticMergeMode: 2
+  m_DesiredImportWorkerCount: 3
+  m_StandbyImportWorkerCount: 2
+  m_IdleImportWorkerShutdownDelay: 60000
   m_VCShowFailedCheckout: 1
   m_VCOverwriteFailedCheckoutAssets: 1
   m_VCProjectOverlayIcons: 1
   m_VCHierarchyOverlayIcons: 1
   m_VCOtherOverlayIcons: 1
   m_VCAllowAsyncUpdate: 1
+  m_ArtifactGarbageCollection: 1

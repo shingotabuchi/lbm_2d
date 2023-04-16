@@ -1,0 +1,128 @@
+#pragma kernel InitMacroVariables
+#pragma kernel InitMicroVariables
+#pragma kernel Collision
+
+RWStructuredBuffer<float> uv,phi,rho,che;
+RWStructuredBuffer<float> f,g,force;
+
+uint DIM_X;
+uint DIM_Y;
+uint DIMSqrd9;
+float gamma,beta,kap;
+float phi0;
+float radius;
+float wid;
+float tauf,taug;
+
+[numthreads(8, 8, 1)]
+void InitMacroVariables(uint3 id : SV_DispatchThreadID)
+{
+    int i = (int)id.x;
+    int j = (int)id.y;
+    int index = i + j*DIM_X;
+    int uIndex = (i + j*DIM_X)*2 + 0;
+    int vIndex = (i + j*DIM_X)*2 + 1;
+    uv[uIndex] = 0.0;
+    uv[vIndex] = 0.0;
+    rho[index] = 1.0;
+    float distFromOrigin = sqrt(pow(((float)i - (float)(DIM_X)*0.5),2) + pow(((float)j - (float)(DIM_Y)*0.5),2));
+    if(distFromOrigin < radius*DIM_X)
+    {
+        phi[index] = phi0;
+    }
+    else phi[index] = -phi0;
+    // *tanh(2.0*(distFromOrigin - radius*DIM_X)/wid);
+}
+
+[numthreads(8, 8, 1)]
+void InitMicroVariables(uint3 id : SV_DispatchThreadID)
+{
+    float cx[] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    float w[] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
+    int i = (int)id.x;
+    int j = (int)id.y;
+
+    int ip = (i + 1)%DIM_X;
+    int im = (i - 1+DIM_X)%DIM_X;
+    int jp = (j + 1)%DIM_Y; 
+    int jm = (j - 1+DIM_Y)%DIM_Y; 
+    
+    // int ip = (i + 1)%DIM_X;
+    // int im = (i - 1+DIM_X)%DIM_X;
+    // int jp = (j + 1)%DIM_Y; 
+    // int jm = (j - 1+DIM_Y)%DIM_Y; 
+
+    float laplacianPhi = phi[ip + j*DIM_X] + phi[im + j*DIM_X] + phi[i + jp*DIM_X] + phi[i + jm*DIM_X] - 4.0*phi[i + j*DIM_X];
+    che[i + j*DIM_X] = 4.0*beta*(pow(phi[i + j*DIM_X],2) - pow(phi0,2))*phi[i + j*DIM_X] - kap*laplacianPhi;
+    float u2 = uv[(i + j*DIM_X)*2 + 0] *uv[(i + j*DIM_X)*2 + 0] + uv[(i + j*DIM_X)*2 + 1] *uv[(i + j*DIM_X)*2 + 1] ;
+    float f0 = rho[i + j*DIM_X]*(1.0 -3.0/2.0*u2 - 15.0/4.0*phi[i + j*DIM_X]*che[i + j*DIM_X])*4.0/9.0;
+    float g0 = phi[i + j*DIM_X] - 5.0/9.0*gamma*che[i + j*DIM_X];
+
+    f[(i + j*DIM_X)*9 + 0] = f0;
+    g[(i + j*DIM_X)*9 + 0] = g0;
+    f[(i + j*DIM_X)*9 + 0 + DIMSqrd9] = f0;
+    g[(i + j*DIM_X)*9 + 0 + DIMSqrd9] = g0;
+
+    for (int k = 1; k < 9; k++)
+    {
+        float cu = cx[k]*uv[(i + j*DIM_X)*2 + 0] + cy[k]*uv[(i + j*DIM_X)*2 + 1] ;  
+        f0 = w[k]*rho[i + j*DIM_X]*(1.0 +3.0*cu +9.0/2.0*cu*cu -3.0/2.0*u2 + 3.0*phi[i + j*DIM_X]*che[i + j*DIM_X]);
+        g0 = w[k]*(gamma*che[i + j*DIM_X] + 3.0*phi[i + j*DIM_X]*cu);
+        f[(i + j*DIM_X)*9 + k] = f0;
+        g[(i + j*DIM_X)*9 + k] = g0;
+        f[(i + j*DIM_X)*9 + k + DIMSqrd9] = f0;
+        g[(i + j*DIM_X)*9 + k + DIMSqrd9] = g0;
+    }
+}
+
+[numthreads(8, 8, 1)]
+void Collision(uint3 id : SV_DispatchThreadID)
+{
+    float cx[] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    float w[] = {4.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
+    int i = (int)id.x;
+    int j = (int)id.y;
+    int ip = (i + 1)%DIM_X;
+    int im = (i - 1+DIM_X)%DIM_X;
+    int jp = (j + 1)%DIM_Y; 
+    int jm = (j - 1+DIM_Y)%DIM_Y; 
+    // int ip = (i + 1)%DIM_X;
+    // int im = (i - 1+DIM_X)%DIM_X;
+    // int jp = (j + 1)%DIM_Y; 
+    // int jm = (j - 1+DIM_Y)%DIM_Y; 
+
+    float u2 = uv[(i + j*DIM_X)*2 + 0] *uv[(i + j*DIM_X)*2 + 0] + uv[(i + j*DIM_X)*2 + 1] *uv[(i + j*DIM_X)*2 + 1];
+    force[(i + j*DIM_X)*2 + 0]  = che[i + j*DIM_X] * (phi[ip + j*DIM_X] - phi[im + j*DIM_X])*0.5;
+    force[(i + j*DIM_X)*2 + 1]  = che[i + j*DIM_X] * (phi[i + jp*DIM_X] - phi[i + jm*DIM_X])*0.5;
+    float uf = uv[(i + j*DIM_X)*2 + 0] *force[(i + j*DIM_X)*2 + 0]  + uv[(i + j*DIM_X)*2 + 1] *force[(i + j*DIM_X)*2 + 1];
+
+    float f0 = rho[i + j*DIM_X]*(1.0 -3.0/2.0*u2 - 15.0/4.0*phi[i + j*DIM_X]*che[i + j*DIM_X])*4.0/9.0;
+    float g0 = phi[i + j*DIM_X] - 5.0/9.0*gamma*che[i + j*DIM_X];
+    float fi = -4.0/3.0*(1.0 - 0.5/tauf)*uf;
+    f[(i + j*DIM_X)*9 + 0] = f[(i + j*DIM_X)*9 + 0 + DIMSqrd9] - (f[(i + j*DIM_X)*9 + 0 + DIMSqrd9] - f0)/tauf + fi;
+    g[(i + j*DIM_X)*9 + 0] = g[(i + j*DIM_X)*9 + 0 + DIMSqrd9] - (g[(i + j*DIM_X)*9 + 0 + DIMSqrd9] - g0)/taug;
+
+    float sumf = 0;
+    float sumg = 0;
+    for (int k = 1; k < 9; k++)
+    {
+        float tmp = cx[k]*uv[(i + j*DIM_X)*2 + 0] + cy[k]*uv[(i + j*DIM_X)*2 + 1] ;      
+        float tmp1 = cx[k]*force[(i + j*DIM_X)*2 + 0]  + cy[k]*force[(i + j*DIM_X)*2 + 1] ;
+        float tmp2 = uv[(i + j*DIM_X)*2 + 0] *force[(i + j*DIM_X)*2 + 0] *cx[k]*cx[k]
+                + uv[(i + j*DIM_X)*2 + 0] *force[(i + j*DIM_X)*2 + 1] *cx[k]*cy[k]
+                + uv[(i + j*DIM_X)*2 + 1] *force[(i + j*DIM_X)*2 + 0] *cy[k]*cx[k]
+                + uv[(i + j*DIM_X)*2 + 1] *force[(i + j*DIM_X)*2 + 1] *cy[k]*cy[k];   
+        f0 = w[k]*rho[i + j*DIM_X]*(1.0 +3.0*tmp +9.0/2.0*tmp*tmp -3.0/2.0*u2 + 3.0*phi[i + j*DIM_X]*che[i + j*DIM_X]);
+        g0 = w[k]*(gamma*che[i + j*DIM_X] + 3.0*phi[i + j*DIM_X]*tmp);
+        fi = w[k]*(1.0 - 0.5/tauf)*(3.0*tmp1 + 9.0*tmp2 - 3.0*uf);
+        f[(i + j*DIM_X)*9 + k] = f[(i + j*DIM_X)*9 + k + DIMSqrd9] - (f[(i + j*DIM_X)*9 + k + DIMSqrd9] - f0)/tauf + fi;
+        g[(i + j*DIM_X)*9 + k] = g[(i + j*DIM_X)*9 + k + DIMSqrd9] - (g[(i + j*DIM_X)*9 + k + DIMSqrd9] - g0)/taug;
+
+        sumf += f[(i + j*DIM_X)*9 + k];
+        sumg += g[(i + j*DIM_X)*9 + k];
+    }
+    // f[(i + j*DIM_X)*9 + 0] = rho[i + j*DIM_X] - sumf;
+    // g[(i + j*DIM_X)*9 + 0] = phi[i + j*DIM_X] - sumg;
+}
