@@ -1,10 +1,15 @@
 #pragma kernel InitMacroVariables
 #pragma kernel InitMicroVariables
 #pragma kernel Collision
+#pragma kernel Streaming
+#pragma kernel CalcVariables
+#pragma kernel PlotOrderParameter
+#pragma kernel PlotDensity
+#pragma kernel PlotChemPot
 
 RWStructuredBuffer<float> uv,phi,rho,che;
 RWStructuredBuffer<float> f,g,force;
-
+RWTexture2D<float4> renderTexture;
 uint DIM_X;
 uint DIM_Y;
 uint DIMSqrd9;
@@ -13,7 +18,46 @@ float phi0;
 float radius;
 float wid;
 float tauf,taug;
+float maxPhi,minPhi;
+float maxRho,minRho;
+float maxChe,minChe;
+static float4 colorsOfMap[7] = 
+{
+    float4(0,0,0,1),
+    float4(0,0,1,1),
+    float4(0,1,1,1),
+    float4(0,1,0,1),
+    float4(1,1,0,1),
+    float4(1,0,0,1),
+    float4(1,1,1,1),
+};
+static float colorPerc = 1.0 / (7.0-1.0);
+float4 ColorMap(float val, float maxVal)
+{
+    if(val > maxVal) val = maxVal;
+    float valPerc = val / maxVal;// value%
+    int blockIdx = (int)(valPerc / colorPerc);// Idx of 
+    float valPercResidual = valPerc - (blockIdx*colorPerc);//remove the part represented of block 
+    float percOfColor = valPercResidual / colorPerc;// % of color of this block that will be filled
+    float4 cTarget = colorsOfMap[blockIdx];
+    float deltaR = 0;
+    float deltaG = 0;
+    float deltaB = 0;
 
+    if(blockIdx != 6)
+    {
+        float4 cNext = colorsOfMap[blockIdx + 1];
+        deltaR =cNext.x - cTarget.x;
+        deltaG =cNext.y - cTarget.y;
+        deltaB =cNext.z - cTarget.z;
+    }
+
+    float R = cTarget.r + (deltaR * percOfColor);
+    float G = cTarget.g + (deltaG * percOfColor);
+    float B = cTarget.b + (deltaB * percOfColor);
+
+    return float4(R,G,B,1.0);
+}
 [numthreads(8, 8, 1)]
 void InitMacroVariables(uint3 id : SV_DispatchThreadID)
 {
@@ -26,12 +70,12 @@ void InitMacroVariables(uint3 id : SV_DispatchThreadID)
     uv[vIndex] = 0.0;
     rho[index] = 1.0;
     float distFromOrigin = sqrt(pow(((float)i - (float)(DIM_X)*0.5),2) + pow(((float)j - (float)(DIM_Y)*0.5),2));
-    if(distFromOrigin < radius*DIM_X)
-    {
-        phi[index] = phi0;
-    }
-    else phi[index] = -phi0;
-    // *tanh(2.0*(distFromOrigin - radius*DIM_X)/wid);
+    // if(distFromOrigin < radius*DIM_X)
+    // {
+    //     phi[index] = phi0;
+    // }
+    // else phi[index] = -phi0;
+    phi[index] = -phi0*tanh(2.0*(distFromOrigin - radius*DIM_X)/wid);
 }
 
 [numthreads(8, 8, 1)]
@@ -126,3 +170,85 @@ void Collision(uint3 id : SV_DispatchThreadID)
     // f[(i + j*DIM_X)*9 + 0] = rho[i + j*DIM_X] - sumf;
     // g[(i + j*DIM_X)*9 + 0] = phi[i + j*DIM_X] - sumg;
 }
+
+[numthreads(8, 8, 1)]
+void Streaming(uint3 id : SV_DispatchThreadID)
+{
+    float cx[] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    int i = (int)id.x;
+    int j = (int)id.y;
+    int k;
+
+    for(k = 0; k < 9; k++)
+    {
+        int im = (i + (int)cx[k] + DIM_X)%DIM_X; 
+        int jm = (j + (int)cy[k] + DIM_Y)%DIM_Y;
+        f[(im + jm*DIM_X)*9 + k + DIMSqrd9] = f[(i + j*DIM_X)*9 + k];
+        g[(im + jm*DIM_X)*9 + k + DIMSqrd9] = g[(i + j*DIM_X)*9 + k];
+    }
+}
+
+[numthreads(8, 8, 1)]
+void CalcVariables(uint3 id : SV_DispatchThreadID)
+{
+    float cx[] = {0, 1,    0,   -1,    0,     1,    -1,    -1,     1};
+    float cy[] = {0, 0,    1,    0,   -1,     1,     1,    -1,    -1};
+    int i = (int)id.x;
+    int j = (int)id.y;
+
+    int ip = (i + 1)%DIM_X;
+    int im = (i - 1+DIM_X)%DIM_X;
+    int jp = (j + 1)%DIM_Y; 
+    int jm = (j - 1+DIM_Y)%DIM_Y;
+
+    rho[i + j*DIM_X] = f[(i + j*DIM_X)*9 + 0 + DIMSqrd9]; 
+    uv[(i + j*DIM_X)*2 + 0] = 0; uv[(i + j*DIM_X)*2 + 1] = 0;
+    phi[i + j*DIM_X] = g[(i + j*DIM_X)*9 + 0 + DIMSqrd9];
+    for(int k = 1; k <= 8; k++)
+    {
+        rho[i + j*DIM_X] = rho[i + j*DIM_X] + f[(i + j*DIM_X)*9 + k + DIMSqrd9];
+        uv[(i + j*DIM_X)*2 + 0] =   uv[(i + j*DIM_X)*2 + 0] + f[(i + j*DIM_X)*9 + k + DIMSqrd9]*cx[k];
+        uv[(i + j*DIM_X)*2 + 1] =   uv[(i + j*DIM_X)*2 + 1] + f[(i + j*DIM_X)*9 + k + DIMSqrd9]*cy[k];
+        phi[i + j*DIM_X] =   phi[i + j*DIM_X] + g[(i + j*DIM_X)*9 + k + DIMSqrd9];
+        
+    } 
+    uv[(i + j*DIM_X)*2 + 0] = uv[(i + j*DIM_X)*2 + 0] /rho[i + j*DIM_X];
+    uv[(i + j*DIM_X)*2 + 1] = uv[(i + j*DIM_X)*2 + 1] /rho[i + j*DIM_X];
+
+    uv[(i + j*DIM_X)*2 + 0] = uv[(i + j*DIM_X)*2 + 0] + force[(i + j*DIM_X)*2 + 0] *0.5;
+    uv[(i + j*DIM_X)*2 + 1] = uv[(i + j*DIM_X)*2 + 1] + force[(i + j*DIM_X)*2 + 1] *0.5;
+    float tmp = phi[ip + j*DIM_X] + phi[im + j*DIM_X] + phi[i + jp*DIM_X] + phi[i + jm*DIM_X] - 4.0*phi[i + j*DIM_X];
+    che[i + j*DIM_X] = 4.0*beta*(pow(phi[i + j*DIM_X],2) - pow(phi0,2))*phi[i + j*DIM_X] - kap*tmp;
+}
+
+[numthreads(8, 8, 1)]
+void PlotOrderParameter(uint3 id : SV_DispatchThreadID)
+{
+    int i = (int)id.x;
+    int j = (int)id.y;
+    int index = i + j*DIM_X;
+    float orderParameter = phi[index];
+    renderTexture[id.xy] = ColorMap(orderParameter-minPhi,maxPhi-minPhi);
+}
+
+[numthreads(8, 8, 1)]
+void PlotDensity(uint3 id : SV_DispatchThreadID)
+{
+    int i = (int)id.x;
+    int j = (int)id.y;
+    int index = i + j*DIM_X;
+    float dens = rho[index];
+    renderTexture[id.xy] = ColorMap(dens-minRho,maxRho-minRho);
+}
+
+[numthreads(8, 8, 1)]
+void PlotChemPot(uint3 id : SV_DispatchThreadID)
+{
+    int i = (int)id.x;
+    int j = (int)id.y;
+    int index = i + j*DIM_X;
+    float chemPot = che[index];
+    renderTexture[id.xy] = ColorMap(chemPot-minChe,maxChe-minChe);
+}
+    

@@ -108,7 +108,7 @@ public class LBMLap : MonoBehaviour
                 for (int k = 1; k < 9; k++)
                 {
                     tmp = cx[k]*u[i,j] + cy[k]*v[i,j];  
-                    f0[k,i,j] = w[k]*rho[i,j]*(1.0f +3.0f*tmp +9.0f/2.0f*tmp*tmp -3.0f/2.0f*u2 + 3.0f*phi[i,j]*che[i,j]);
+                    f0[k,i,j] = w[k]*(rho[i,j]*(1.0f +3.0f*tmp +9.0f/2.0f*tmp*tmp -3.0f/2.0f*u2) + 3.0f*phi[i,j]*che[i,j]);
                     g0[k,i,j] = w[k]*(gamma*che[i,j] + 3.0f*phi[i,j]*tmp);
                     f[k,i,j] = f0[k,i,j];
                     g[k,i,j] = g0[k,i,j];
@@ -199,13 +199,14 @@ public class LBMLap : MonoBehaviour
                 g[0,i,j] = g[0,i,j] - (g[0,i,j] - g0[0,i,j])/taug;
                 for (int k = 1; k < 9; k++)
                 {
-                    tmp = cx[k]*u[i,j] + cy[k]*v[i,j];      
+                    tmp = cx[k]*u[i,j] + cy[k]*v[i,j];
                     tmp1 = cx[k]*fx[i,j] + cy[k]*fy[i,j];
                     tmp2 = u[i,j]*fx[i,j]*cx[k]*cx[k]
                             + u[i,j]*fy[i,j]*cx[k]*cy[k]
                             + v[i,j]*fx[i,j]*cy[k]*cx[k]
                             + v[i,j]*fy[i,j]*cy[k]*cy[k];   
-                    f0[k,i,j] = w[k]*rho[i,j]*(1.0f +3.0f*tmp +9.0f/2.0f*tmp*tmp -3.0f/2.0f*u2 + 3.0f*phi[i,j]*che[i,j]);
+                                
+                    f0[k,i,j] = w[k]*(rho[i,j]*(1.0f +3.0f*tmp +9.0f/2.0f*tmp*tmp -3.0f/2.0f*u2) + 3.0f*phi[i,j]*che[i,j]);
                     g0[k,i,j] = w[k]*(gamma*che[i,j] + 3.0f*phi[i,j]*tmp);
                     fi[k,i,j] = w[k]*(1.0f - 0.5f/tauf)*(3.0f*tmp1 + 9.0f*tmp2 - 3.0f*u3);
                     f[k,i,j] = f[k,i,j] - (f[k,i,j] - f0[k,i,j])/tauf + fi[k,i,j];

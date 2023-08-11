@@ -43,9 +43,11 @@ public class FreeEnergy : MonoBehaviour
     int DIMSqrd9;
 
     public ComputeShader compute;
-    int initMicroVariables,initMacroVariables,collision;
+    int initMicroVariables,initMacroVariables,collision,streaming,calcVariables,plotOrderParameter;
+    int plotDensity,plotChemPot;
     ComputeBuffer uv,rho,phi;
     ComputeBuffer f,g,che,force;
+    RenderTexture renderTexture;
 
     public bool nextFrame = false;
     public bool debugMode = true;
@@ -71,7 +73,8 @@ public class FreeEnergy : MonoBehaviour
         plotPixels = plotTexture.GetPixels();
         plotImage.sprite = Sprite.Create(plotTexture, new Rect(0,0,DIM_X,DIM_Y),UnityEngine.Vector2.zero);
         ((RectTransform)plotImage.transform).sizeDelta = new Vector2((DIM_X*1080)/DIM_Y,1080);
-
+        renderTexture = new RenderTexture(DIM_X,DIM_Y,24);
+        renderTexture.enableRandomWrite = true;
         uvArray = new float[DIMSqrd*2];
         forceArray = new float[DIMSqrd*2];
         rhoArray = new float[DIMSqrd];
@@ -91,14 +94,14 @@ public class FreeEnergy : MonoBehaviour
         f = new ComputeBuffer(DIMSqrd9*2,sizeof(float));
         g = new ComputeBuffer(DIMSqrd9*2,sizeof(float));
 
-        maxSpeed = 0f;
-        minSpeed = Mathf.Infinity;
-        maxPhi = 0f;
-        minPhi = Mathf.Infinity;
-        maxRho = 0f;
-        minRho = Mathf.Infinity;
-        maxChe = 0f;
-        minChe = Mathf.Infinity;
+        // maxSpeed = 0f;
+        // minSpeed = Mathf.Infinity;
+        // maxPhi = 0f;
+        // minPhi = Mathf.Infinity;
+        // maxRho = 0f;
+        // minRho = Mathf.Infinity;
+        // maxChe = 0f;
+        // minChe = Mathf.Infinity;
 
         compute.SetInt("DIM_X",DIM_X);
         compute.SetInt("DIM_Y",DIM_Y);
@@ -134,6 +137,31 @@ public class FreeEnergy : MonoBehaviour
         compute.SetBuffer(collision,"che",che);
         compute.SetBuffer(collision,"force",force);
 
+        streaming = compute.FindKernel("Streaming");
+        compute.SetBuffer(streaming,"f",f);
+        compute.SetBuffer(streaming,"g",g);
+
+        calcVariables = compute.FindKernel("CalcVariables");
+        compute.SetBuffer(calcVariables,"uv",uv);
+        compute.SetBuffer(calcVariables,"rho",rho);
+        compute.SetBuffer(calcVariables,"phi",phi);
+        compute.SetBuffer(calcVariables,"f",f);
+        compute.SetBuffer(calcVariables,"g",g);
+        compute.SetBuffer(calcVariables,"force",force);
+        compute.SetBuffer(calcVariables,"che",che);
+
+        plotOrderParameter = compute.FindKernel("PlotOrderParameter");
+        compute.SetBuffer(plotOrderParameter,"phi",phi);
+        compute.SetTexture(plotOrderParameter,"renderTexture",renderTexture);
+
+        plotDensity = compute.FindKernel("PlotDensity");
+        compute.SetBuffer(plotDensity,"rho",rho);
+        compute.SetTexture(plotDensity,"renderTexture",renderTexture);
+
+        plotChemPot = compute.FindKernel("PlotChemPot");
+        compute.SetBuffer(plotChemPot,"che",che);
+        compute.SetTexture(plotChemPot,"renderTexture",renderTexture);
+
         // InitMacro();
         // uv.SetData(uvArray);
         // rho.SetData(rhoArray);
@@ -142,7 +170,7 @@ public class FreeEnergy : MonoBehaviour
         // g.SetData(gArray);
         // che.SetData(cheArray);
         compute.Dispatch(initMacroVariables,(DIM_X+7)/8,(DIM_Y+7)/8,1);
-        compute.Dispatch(initMicroVariables,(DIM_X+7)/8,(DIM_Y+7)/8,1);
+        // compute.Dispatch(initMicroVariables,(DIM_X+7)/8,(DIM_Y+7)/8,1);
         uv.GetData(uvArray);
         rho.GetData(rhoArray);
         phi.GetData(phiArray);
@@ -150,10 +178,25 @@ public class FreeEnergy : MonoBehaviour
         g.GetData(gArray);
         che.GetData(cheArray);
         force.GetData(forceArray);
-        // Init();
+        Init();
+        uv.SetData(uvArray);
+        rho.SetData(rhoArray);
+        phi.SetData(phiArray);
+        f.SetData(fArray);
+        g.SetData(gArray);
+        che.SetData(cheArray);
+        force.SetData(forceArray);
         UpdatePlot();
     }
 
+    private void OnValidate() {
+        compute.SetFloat("minPhi",minPhi);
+        compute.SetFloat("maxPhi",maxPhi);
+        compute.SetFloat("minRho",minRho);
+        compute.SetFloat("maxRho",maxRho);
+        compute.SetFloat("minChe",minChe);
+        compute.SetFloat("maxChe",maxChe);
+    }
     
     void InitMacro()
     {
@@ -213,8 +256,56 @@ public class FreeEnergy : MonoBehaviour
 
     void LBMStep()
     {
-        Collision();
+        // uv.SetData(uvArray);
+        // rho.SetData(rhoArray);
+        // phi.SetData(phiArray);
+        // f.SetData(fArray);
+        // g.SetData(gArray);
+        // che.SetData(cheArray);
+        // force.SetData(forceArray);
         // compute.Dispatch(collision,(DIM_X+7)/8,(DIM_Y+7)/8,1);
+        uv.GetData(uvArray);
+        rho.GetData(rhoArray);
+        phi.GetData(phiArray);
+        f.GetData(fArray);
+        g.GetData(gArray);
+        che.GetData(cheArray);
+        force.GetData(forceArray);
+        Collision();
+
+
+        // Streaming();
+
+        uv.SetData(uvArray);
+        rho.SetData(rhoArray);
+        phi.SetData(phiArray);
+        f.SetData(fArray);
+        g.SetData(gArray);
+        che.SetData(cheArray);
+        force.SetData(forceArray);
+
+        compute.Dispatch(streaming,(DIM_X+7)/8,(DIM_Y+7)/8,1);
+        // Streaming();
+
+        uv.GetData(uvArray);
+        rho.GetData(rhoArray);
+        phi.GetData(phiArray);
+        f.GetData(fArray);
+        g.GetData(gArray);
+        che.GetData(cheArray);
+        force.GetData(forceArray);
+        UpdateSpeedAndPotentials();
+        uv.SetData(uvArray);
+        rho.SetData(rhoArray);
+        phi.SetData(phiArray);
+        f.SetData(fArray);
+        g.SetData(gArray);
+        che.SetData(cheArray);
+        force.SetData(forceArray);
+
+
+        // compute.Dispatch(calcVariables,(DIM_X+7)/8,(DIM_Y+7)/8,1);
+
         // uv.GetData(uvArray);
         // rho.GetData(rhoArray);
         // phi.GetData(phiArray);
@@ -223,10 +314,6 @@ public class FreeEnergy : MonoBehaviour
         // che.GetData(cheArray);
         // force.GetData(forceArray);
 
-        Streaming();
-        // Boundaries();
-        UpdateSpeedAndPotentials();
-
         // uv.SetData(uvArray);
         // rho.SetData(rhoArray);
         // phi.SetData(phiArray);
@@ -234,6 +321,13 @@ public class FreeEnergy : MonoBehaviour
         // g.SetData(gArray);
         // che.SetData(cheArray);
         // force.SetData(forceArray);
+        // compute.SetBuffer(collision,"uv",uv);
+        // compute.SetBuffer(collision,"rho",rho);
+        // compute.SetBuffer(collision,"phi",phi);
+        // compute.SetBuffer(collision,"f",f);
+        // compute.SetBuffer(collision,"g",g);
+        // compute.SetBuffer(collision,"che",che);
+        // compute.SetBuffer(collision,"force",force);
     }
 
     // Update is called once per frame
@@ -250,29 +344,41 @@ public class FreeEnergy : MonoBehaviour
 
     void UpdatePlot()
     {
-        for (int i = 0; i < plotPixels.Length; i++)
-        {
-            if(normalizeHeatMap)
-            {
-                if(mode == HeatMapMode.ChemicalPotential)
-                plotPixels[i] = colorHeatMap.GetColorForValue(cheArray[i%DIM_X+ (i/DIM_X)*DIM_X]-minChe,maxChe-minChe);
-                else if(mode == HeatMapMode.OrderParameter)
-                plotPixels[i] = colorHeatMap.GetColorForValue(phiArray[i%DIM_X+ (i/DIM_X)*DIM_X]-minPhi,maxPhi - minPhi);
-                else
-                plotPixels[i] = colorHeatMap.GetColorForValue(rhoArray[i%DIM_X+ (i/DIM_X)*DIM_X]-minRho,maxRho-minRho);
-            }
-            else
-            {
-                if(mode == HeatMapMode.ChemicalPotential)
-                plotPixels[i] = colorHeatMap.GetColorForValue(cheArray[i%DIM_X+ (i/DIM_X)*DIM_X],maxChe);
-                else if(mode == HeatMapMode.OrderParameter)
-                plotPixels[i] = colorHeatMap.GetColorForValue(phiArray[i%DIM_X+ (i/DIM_X)*DIM_X],maxPhi);
-                else
-                plotPixels[i] = colorHeatMap.GetColorForValue(rhoArray[i%DIM_X+ (i/DIM_X)*DIM_X],maxRho);
-            }
-        }
-        plotTexture.SetPixels(plotPixels);
+        if(mode == HeatMapMode.ChemicalPotential) compute.Dispatch(plotChemPot,(DIM_X+7)/8,(DIM_Y+7)/8,1);
+        else if(mode == HeatMapMode.OrderParameter) compute.Dispatch(plotOrderParameter,(DIM_X+7)/8,(DIM_Y+7)/8,1);
+        else compute.Dispatch(plotDensity,(DIM_X+7)/8,(DIM_Y+7)/8,1);
+
+        RenderTexture.active = renderTexture;
+        plotTexture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
         plotTexture.Apply();
+
+        // rho.GetData(rhoArray);
+        // phi.GetData(phiArray);
+        // che.GetData(cheArray);
+        // for (int i = 0; i < plotPixels.Length; i++)
+        // {
+        //     if(normalizeHeatMap)
+        //     {
+        //         if(mode == HeatMapMode.ChemicalPotential)
+        //         plotPixels[i] = colorHeatMap.GetColorForValue(cheArray[i%DIM_X+ (i/DIM_X)*DIM_X]-minChe,maxChe-minChe);
+        //         else if(mode == HeatMapMode.OrderParameter)
+        //         {print(phiArray[i%DIM_X+ (i/DIM_X)*DIM_X]);
+        //         plotPixels[i] = colorHeatMap.GetColorForValue(phiArray[i%DIM_X+ (i/DIM_X)*DIM_X]-minPhi,maxPhi - minPhi);}
+        //         else
+        //         plotPixels[i] = colorHeatMap.GetColorForValue(rhoArray[i%DIM_X+ (i/DIM_X)*DIM_X]-minRho,maxRho-minRho);
+        //     }
+        //     else
+        //     {
+        //         if(mode == HeatMapMode.ChemicalPotential)
+        //         plotPixels[i] = colorHeatMap.GetColorForValue(cheArray[i%DIM_X+ (i/DIM_X)*DIM_X],maxChe);
+        //         else if(mode == HeatMapMode.OrderParameter)
+        //         plotPixels[i] = colorHeatMap.GetColorForValue(phiArray[i%DIM_X+ (i/DIM_X)*DIM_X],maxPhi);
+        //         else
+        //         plotPixels[i] = colorHeatMap.GetColorForValue(rhoArray[i%DIM_X+ (i/DIM_X)*DIM_X],maxRho);
+        //     }
+        // }
+        // plotTexture.SetPixels(plotPixels);
+        // plotTexture.Apply();
     }
 
     void Collision()

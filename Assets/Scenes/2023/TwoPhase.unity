@@ -500,16 +500,16 @@ MonoBehaviour:
   vectorFieldOn: 0
   mode: 4
   normalizeHeatMap: 1
-  DIM_X: 51
-  DIM_Y: 51
-  maxRho: 0
-  minRho: 0
+  DIM_X: 50
+  DIM_Y: 50
+  maxRho: 1
+  minRho: 0.9
   maxSpeed: 0
   minSpeed: 0
   maxPhi: 1
   minPhi: -1
-  maxChe: 0
-  minChe: 0
+  maxChe: 0.000001
+  minChe: -0.000001
   tauf: 0.7
   taug: 0.7
   gamma: 10
@@ -517,7 +517,7 @@ MonoBehaviour:
   phi0: 1
   sig: 0.0001
   radius: 0.25
-  loopCount: 100
+  loopCount: 1
   randomBunbo: 10
   compute: {fileID: 7200000, guid: 3d3db1b21186aa14bacd48c284273388, type: 3}
   nextFrame: 0
